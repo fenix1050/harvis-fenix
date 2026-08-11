@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+*.pyc
+
+# Datos personales del runtime — JAMÁS commitear
+kloom.log*
+turnos.jsonl
+historial.jsonl
+memoria.md
+comandos.yaml
+telegram_owner.json
+contactos_whatsapp.json
+playlists_ytmusic.json
+dataset/
+screenshots/
+*.mp3
+*.wav
+
+# estado local del pedido de estrella
+estrella.json
+
+# credencial propia de HARVIS (CLAUDE_CONFIG_DIR)
+.claude-harvis/

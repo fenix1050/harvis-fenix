@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HARVIS — Tienda de skills</title>
+<meta name="description" content="Skills pagas para HARVIS, el asistente de voz hackeable para Windows. Compra única o suscripción, se instalan en un click desde el HUD.">
+<link rel="icon" href="harvis.png">
+<style>
+:root {
+  --bg: #050b12; --panel: #0a1420; --line: #12283a;
+  --cyan: #35d6ff; --cyan-dim: #1a5a75; --amber: #ffb547;
+  --green: #3dd68c; --pink: #db61a2; --text: #cfe9f5; --muted: #5d7d92;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); min-height: 100vh;
+  font: 15px/1.6 'Segoe UI Variable Display', 'Segoe UI', system-ui,
+    sans-serif; }
+a { color: var(--cyan); text-decoration: none; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+
+header { position: sticky; top: 0; z-index: 20;
+  background: rgba(5, 11, 18, .88); backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(53, 214, 255, .12); }
+header .wrap { display: flex; align-items: center; gap: 12px;
+  padding: 12px 20px; }
+header img { width: 38px; height: 38px; border-radius: 50%;
+  box-shadow: 0 0 12px rgba(53, 214, 255, .5); }
+header h1 { font-size: 16px; letter-spacing: 3px; color: var(--cyan);
+  flex: 1; }
+header h1 span { display: block; font-size: 10px; letter-spacing: 1.5px;
+  color: var(--muted); font-weight: 400; }
+#lang-btn { background: none; border: 1px solid var(--line);
+  border-radius: 8px; color: var(--muted); padding: 5px 10px;
+  cursor: pointer; font-size: 12px; }
+#lang-btn:hover { color: var(--cyan); border-color: var(--cyan-dim); }
+.hero { text-align: center; padding: 52px 20px 8px; }
+.hero h2 { font-size: clamp(26px, 4.5vw, 38px); line-height: 1.2;
+  color: #f2faff; }
+.hero h2 b { color: var(--cyan); }
+.hero p { color: var(--muted); max-width: 560px; margin: 14px auto 0; }
+.hero .mini { font-size: 12.5px; margin-top: 10px; }
+
+#grid { display: grid; grid-template-columns: repeat(auto-fill,
+    minmax(280px, 1fr)); gap: 16px; padding: 36px 0 10px; }
+.card { border: 1px solid var(--line); border-radius: 14px;
+  background: linear-gradient(180deg, #0a1826, var(--panel));
+  padding: 18px; display: flex; flex-direction: column; gap: 10px;
+  transition: border-color .25s, box-shadow .25s; }
+.card:hover { border-color: var(--cyan-dim);
+  box-shadow: 0 0 18px rgba(53, 214, 255, .12); }
+.card h3 { font-size: 16px; color: #eaf7ff; }
+.precio { color: var(--green); font-weight: 700; font-size: 15px; }
+.precio i { font-style: normal; font-weight: 400; color: var(--muted);
+  font-size: 12px; }
+.card p { color: var(--muted); font-size: 13.5px; }
+/* Lo que se le DICE a HARVIS: la demo más barata de que la skill sirve. */
+.decir { margin: 10px 0 0; padding-left: 10px; flex: 1;
+  border-left: 2px solid rgba(53, 214, 255, .35); font-size: 13px;
+  line-height: 1.7; color: #7de4ff; }
+.filas { display: flex; gap: 8px; }
+.btn { flex: 1; padding: 9px 0; border-radius: 10px; cursor: pointer;
+  font-size: 13px; font-weight: 600; text-align: center; border: 0; }
+.btn-buy { background: linear-gradient(135deg, #1691bd, #35d6ff);
+  color: #04222e; }
+.btn-buy:hover { box-shadow: 0 0 12px rgba(53, 214, 255, .45); }
+.btn[disabled] { background: var(--panel); color: var(--muted);
+  border: 1px solid var(--line); cursor: default; box-shadow: none; }
+.tag-sub { align-self: flex-start; font-size: 10px; letter-spacing: 1.2px;
+  color: var(--pink); border: 1px solid rgba(219, 97, 162, .5);
+  border-radius: 999px; padding: 2px 9px; }
+#vacio { color: var(--muted); text-align: center; padding: 40px 0; }
+
+.como { border-top: 1px solid var(--line); margin-top: 40px;
+  padding: 34px 0 8px; }
+.como h2 { font-size: 15px; letter-spacing: 2px; color: var(--cyan);
+  text-transform: uppercase; margin-bottom: 18px; }
+.pasos { display: grid; grid-template-columns: repeat(auto-fit,
+    minmax(220px, 1fr)); gap: 14px; }
+.paso { border: 1px solid var(--line); border-radius: 12px; padding: 14px;
+  font-size: 13.5px; color: var(--muted); }
+.paso b { color: var(--text); display: block; margin-bottom: 4px; }
+.paso .n { color: var(--cyan); font-weight: 700; margin-right: 6px; }
+
+footer { border-top: 1px solid var(--line); margin-top: 40px;
+  padding: 22px 0 30px; color: var(--muted); font-size: 13px;
+  text-align: center; }
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <img src="harvis.png" alt="HARVIS">
+  <h1>HARVIS<span data-t="sub"></span></h1>
+  <button id="lang-btn" onclick="switchLang()"></button>
+</div></header>
+
+<div class="wrap">
+  <section class="hero">
+    <h2 data-t="titulo"></h2>
+    <p data-t="bajada"></p>
+    <p class="mini"><a href="https://github.com/Kloom89/harvis" data-t="linkApp"></a></p>
+  </section>
+
+  <section id="grid"></section>
+  <p id="vacio" style="display:none" data-t="vacio"></p>
+
+  <section class="como">
+    <h2 data-t="comoTitulo"></h2>
+    <div class="pasos">
+      <div class="paso"><b><span class="n">1</span><span data-t="p1t"></span></b><span data-t="p1"></span></div>
+      <div class="paso"><b><span class="n">2</span><span data-t="p2t"></span></b><span data-t="p2"></span></div>
+      <div class="paso"><b><span class="n">3</span><span data-t="p3t"></span></b><span data-t="p3"></span></div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <span data-t="pie"></span>
+  <a href="https://github.com/Kloom89/harvis">GitHub</a> ·
+  <a href="https://github.com/sponsors/Kloom89" data-t="pieSponsor"></a> ·
+  <a href="https://kloomstudio.com.ar">KloomStudio</a>
+</footer>
+
+<script>
+const STORE_URL = 'https://raw.githubusercontent.com/Kloom89/harvis/main/store.json';
+const I18N = {
+es: {
+  sub: 'tienda de skills',
+  titulo: 'Enseñale trucos nuevos a <b>HARVIS</b>',
+  bajada: 'Skills pagas para el asistente de voz hackeable de Windows. ' +
+    'Cada una es un archivo que se instala en un click desde el HUD — ' +
+    'unas se compran una vez y son tuyas, otras van por mes.',
+  linkApp: '¿Todavía no tenés HARVIS? Es gratis →',
+  vacio: 'El catálogo está vacío por ahora — volvé pronto.',
+  proximamente: 'Próximamente',
+  suscripcion: 'SUSCRIPCIÓN',
+  porMes: ' / mes',
+  comprar: 'Comprar',
+  suscribirme: 'Suscribirme',
+  comoTitulo: 'Cómo funciona',
+  p1t: 'Comprás la skill', p1: 'Pago seguro por LemonSqueezy, con tarjeta. ' +
+    'Te llega el archivo .py y tu clave de licencia por mail.',
+  p2t: 'La instalás en un click', p2: 'En el HUD de HARVIS: AJUSTES → ' +
+    'Skills instaladas → ＋ Instalar skill. Se carga al instante, sin ' +
+    'reiniciar.',
+  p3t: 'Le hablás', p3: 'La skill queda disponible para cualquier cerebro ' +
+    'que uses (Claude, Groq, Ollama…). Las mensuales se renuevan solas y ' +
+    'las podés cancelar cuando quieras.',
+  pie: 'Hecho por ',
+  pieSponsor: 'Sponsorear',
+},
+en: {
+  sub: 'skill store',
+  titulo: 'Teach <b>HARVIS</b> new tricks',
+  bajada: 'Paid skills for the hackable Windows voice assistant. Each one ' +
+    'is a file you install in one click from the HUD — some you buy once ' +
+    'and keep, some are monthly.',
+  linkApp: "Don't have HARVIS yet? It's free →",
+  vacio: 'The catalogue is empty for now — check back soon.',
+  proximamente: 'Coming soon',
+  suscripcion: 'SUBSCRIPTION',
+  porMes: ' / month',
+  comprar: 'Buy',
+  suscribirme: 'Subscribe',
+  comoTitulo: 'How it works',
+  p1t: 'Buy the skill', p1: 'Secure card checkout through LemonSqueezy. ' +
+    'You get the .py file and your license key by email.',
+  p2t: 'Install it in one click', p2: 'In the HARVIS HUD: SETTINGS → ' +
+    'Installed skills → ＋ Install skill. It hot-loads, no restart.',
+  p3t: 'Talk to it', p3: 'The skill works with whichever brain you use ' +
+    '(Claude, Groq, Ollama…). Monthly ones renew on their own and can be ' +
+    'cancelled anytime.',
+  pie: 'Made by ',
+  pieSponsor: 'Sponsor',
+},
+};
+let LANG = (navigator.language || 'en').toLowerCase().startsWith('es')
+  ? 'es' : 'en';
+const T = () => I18N[LANG];
+let SKILLS = [];
+
+function switchLang() { LANG = LANG === 'es' ? 'en' : 'es'; render(); }
+
+function nombre(s) { return (s.name || {})[LANG] || (s.name || {}).en || s.id; }
+function desc(s) { return (s.desc || {})[LANG] || (s.desc || {}).en || ''; }
+function decirHtml(s) {
+  const f = (s.decir || {})[LANG] || (s.decir || {}).en || [];
+  return f.length
+    ? `<p class="decir">${f.map(x => '«' + x + '»').join('<br>')}</p>`
+    : '';
+}
+function urlUtm(s, medio) {
+  return s.url + (s.url.includes('?') ? '&' : '?') +
+    'utm_source=harvis&utm_medium=' + medio + '&utm_campaign=' + s.id;
+}
+function precioHtml(s) {
+  return `<span class="precio">${s.price || ''}` +
+    (s.period === 'month' ? `<i>${T().porMes}</i>` : '') + '</span>';
+}
+
+function render() {
+  const t = T();
+  document.documentElement.lang = LANG;
+  document.getElementById('lang-btn').textContent =
+    LANG === 'es' ? 'EN' : 'ES';
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const v = t[el.dataset.t];
+    if (typeof v === 'string') el.innerHTML = v;
+  });
+  const grid = document.getElementById('grid');
+  // Un botón por tarjeta: LemonSqueezy no tiene checkout multi-producto,
+  // así que un carrito solo prometía algo que después no podía cumplir.
+  grid.innerHTML = SKILLS.map(s => {
+    const sub = s.period === 'month';
+    return `<div class="card">` +
+      (sub ? `<span class="tag-sub">${t.suscripcion}</span>` : '') +
+      `<h3>${nombre(s)}</h3>${precioHtml(s)}<p>${desc(s)}</p>` +
+      decirHtml(s) +
+      `<div class="filas">` +
+      (s.url
+        ? `<button class="btn btn-buy" onclick="window.open(` +
+          `'${urlUtm(s, 'web_store')}','_blank')">` +
+          `${sub ? t.suscribirme : t.comprar}</button>`
+        : `<button class="btn" disabled>${t.proximamente}</button>`) +
+      `</div></div>`;
+  }).join('');
+  document.getElementById('vacio').style.display =
+    SKILLS.length ? 'none' : 'block';
+}
+
+// ?t= además de no-store: el CDN de raw cachea 5 min por URL.
+fetch(STORE_URL + '?t=' + Date.now(), {cache: 'no-store'})
+  .then(r => r.json())
+  .then(d => { SKILLS = d.skills || []; render(); })
+  .catch(() => { SKILLS = []; render(); });
+render();
+</script>
+</body>
+</html>
