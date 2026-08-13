@@ -1,62 +1,86 @@
-# JARVIS Target Boundaries
+# JARVIS Target Architecture
 
-JARVIS is a proposed set of runtime boundaries for evolving HARVIS safely. Phase 0 selects these boundaries and an incremental path; it does not select a framework, database, provider, deployment model, or JavaScript source layout.
+## Scope and Status
 
-## Target Shape
+This document describes the target direction, not an implemented runtime architecture. HARVIS remains a local Python-composed assistant with microphone, HUD, and Telegram ingress; provider/tool turns; and local-file persistence. See `CURRENT_ARCHITECTURE.md` for the evidence-backed current state.
 
-```mermaid
-flowchart LR
-    Mic[Microphone adapter] --> Inbound[InboundTurn]
-    Hud[HUD adapter] --> Inbound
-    Telegram[Telegram adapter] --> Inbound
+Phase 1 is implemented as a default-off, legacy-compatible Core facade in commit `09fa39c` on `feat/jarvis-core`. Its manual microphone/HUD smoke validation is pending. It does not introduce a new runtime provider, database, web stack, or full orchestration pipeline.
 
-    Inbound --> Flag{Legacy or JARVIS-core\nfeature flag}
-    Flag -->|legacy| Legacy[Existing HARVIS turn path]
-    Flag -->|JARVIS core| Orchestrator[TurnOrchestrator]
+## Architectural Direction
 
-    Orchestrator --> Provider[Provider interface]
-    Orchestrator --> Gateway[ToolGateway]
-    Orchestrator --> Storage[Storage port]
-    Orchestrator --> Tracing[Tracing port]
-    Orchestrator --> Outputs[HUD and speech output adapters]
+JARVIS should own stable orchestration contracts while replaceable components remain behind adapters:
 
-    Gateway --> Policy[Validation, risk, authorization,\napproval, audit, timeout, cancellation]
+```text
+Ingress adapters
+  -> Core turn contract
+  -> policy-controlled provider, tool, storage, and output adapters
+  -> response
 ```
 
-## Boundary Contracts
+The intended separation is:
 
-| Boundary | Responsibility | Initial migration treatment |
+| Boundary | Responsibility | Current state |
 |---|---|---|
-| `InboundTurn` | Represent microphone, HUD-text, and Telegram input with origin and identity metadata. | Adapters delegate to the legacy path first. |
-| `TurnOrchestrator` | Coordinate a turn without owning composition, global configuration, or channel-specific behavior. | A facade preserves existing turn behavior. |
-| Provider interface | Normalize requests, responses, tool calls, errors, and cancellation. | Wrap current Claude and OpenAI-compatible paths. |
-| `ToolGateway` | Validate typed input, assign risk, authorize, bind approval, audit, time-limit, and cancel tool execution. | Start in compatibility/observation mode before enforcement by tool class. |
-| Storage and tracing ports | Isolate local state, retention, redaction, and event recording. | Keep file-backed behavior initially. |
-| Output adapters | Deliver responses to the existing pywebview HUD and Edge TTS/`pygame` path. | Preserve the current user experience. |
-| Runtime context and lifecycle supervision | Make dependencies explicit and own startup, shutdown, watcher cancellation, and failure isolation. | Wrap existing components before changing behavior. |
+| Ingress | Carry command text, source, session, and metadata | Shared queue remains legacy; Phase 1 defines request metadata |
+| Core | Coordinate a turn through stable contracts | Compatibility facade delegates to legacy behavior |
+| Provider | Normalize model requests, responses, errors, and cancellation | Existing provider logic remains in HARVIS |
+| Tool gateway | Validate, authorize, approve, execute, and audit effectful operations | Required design; not implemented |
+| Storage and tracing | Persist state with retention and redaction policy | Local files remain the runtime implementation |
+| Output | Send response to HUD and speech adapters | Existing HARVIS output path remains active |
 
-## Current Adapters
+## Phase 1 Boundary
 
-The initial adapters preserve proven runtime capabilities:
+The implemented Core provides immutable request and response contracts, structured failures, cancellation representation, output targets, a `LegacyAdapter`, and a feature-gated dispatcher. `jarvis_core.enabled` defaults to `false`.
 
-| Capability | Current implementation | Boundary direction |
-|---|---|---|
-| Voice input | `sounddevice` -> VAD -> `asyncio` queue -> `faster-whisper` | Microphone `InboundTurn` adapter |
-| HUD | `pywebview` with embedded HTML/JavaScript | HUD input/output adapters |
-| Telegram | Bot API long polling | Telegram `InboundTurn` adapter with enrollment controls |
-| Providers | Claude, Ollama, Groq, Kimi, OpenAI, Gemini through `cerebro.py` / `cerebro_jarvis.py` | Provider adapters |
-| Speech output | Edge TTS -> in-memory MP3 -> `pygame` | Speech output adapter |
-| State and traces | Local Markdown, JSONL, YAML, and JSON files | Storage and tracing ports |
+When disabled, the existing HARVIS dispatch route is used. When enabled, the facade delegates to injected legacy behavior. This preserves compatibility while creating a narrow seam; it is not a replacement for the legacy runtime.
 
-## Architecture Invariants
+## Future Pipeline
 
-- The legacy path and JARVIS-core path are selectable per feature flag and have a rollback path.
-- The HUD may request input or display output but never grants dynamic skill execution authority.
-- All effectful tools cross `ToolGateway`; no model, UI, or provider bypasses policy.
-- Provider choice remains replaceable. Current runtime providers are supported through adapters, not hard-wired into orchestration.
-- Local files remain valid initial storage adapters. No database is selected in Phase 0.
-- OpenRouter, Supabase, and Web Speech API are not current integrations. Future evaluation requires an explicit decision and migration slice.
+The following pipeline is a target shape only:
 
-## First Slice
+```text
+Input
+  -> normalize and identify source
+  -> build bounded context
+  -> choose response, provider, or approved operation
+  -> enforce policy before effectful execution
+  -> execute with timeout and cancellation
+  -> verify when required
+  -> emit a redacted trace and response
+```
 
-Implement only the three `InboundTurn` adapters and a `TurnOrchestrator` facade that delegates unchanged behavior to the existing HARVIS turn loop. Keep providers, tools, persistence, and output implementations on the legacy route until their focused slices are ready.
+Memory retrieval, multi-step planning, agent delegation, event handling, and UI state may join this pipeline only after their contracts and controls are designed and implemented. A request does not need every stage.
+
+## Security Boundary
+
+All effectful operations must eventually cross `ToolGateway`, as defined by `SECURITY_MODEL.md`. The gateway is responsible for typed validation, risk classification, authorization, transaction-bound approval where required, allowlists, bounded execution, cancellation, and redacted audit records.
+
+No provider, model, HUD, dynamic skill, or remote ingress receives direct execution authority. A denylist for arbitrary commands is not a sufficient authorization model.
+
+## Replaceable Components
+
+JARVIS must not make its Core depend directly on a particular LLM provider, agent runtime, database, UI, voice engine, or human-facing knowledge tool. Claude Code, Hermes, Obsidian, and prospective provider or storage products are possible adapters or interfaces, not the Core.
+
+OpenRouter, Supabase, and the Web Speech API are not current HARVIS runtime integrations. No final JavaScript framework, database, or provider has been selected.
+
+## Deferred Capabilities
+
+The following remain future architecture, not Phase 1 implementation:
+
+- provider routing and model profiles;
+- a policy-enforced tools and skills layer;
+- structured and durable memory beyond current local files;
+- context, planning, and verification services;
+- agent supervision, desktop/VPS operations, and remote workflows;
+- Voice v2, vision, browser automation, events, routines, and proactivity;
+- a JARVIS Command Center or replacement HUD.
+
+The HUD must represent verified capabilities and must not be used to simulate unfinished architecture.
+
+## Invariants
+
+1. Preserve a runnable legacy path until equivalent behavior is validated.
+2. Keep feature flags default-safe and each migration slice reversible.
+3. Separate policy and execution from model reasoning and UI presentation.
+4. Keep durable human knowledge distinct from operational machine state.
+5. Record evidence before claiming validation, readiness, or completion.

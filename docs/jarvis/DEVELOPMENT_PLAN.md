@@ -1,72 +1,73 @@
 # JARVIS Development Plan
 
-This plan turns the Phase 0 audit into small, evidence-driven migration slices. It does not prescribe a final framework, database, provider, or JavaScript source layout.
+## Current Position
 
-## Phase 0: Completed Audit
+JARVIS is an incremental evolution of HARVIS, not a rewrite. The current repository state is:
 
-**Outcome:** a verified current-state baseline and a reversible migration shape.
-
-The completed evidence is in [CURRENT_ARCHITECTURE.md](CURRENT_ARCHITECTURE.md). It confirms a Python runtime centered on `kloom.py`, current ingress/output/provider paths, coupling points, risks, component dispositions, and Phase 1 entry criteria.
-
-Phase 0 does not claim that OpenRouter, Supabase, or Web Speech API are current integrations. It does not create a stable tag because the worktree is dirty and no intentional baseline commit has yet been selected and validated.
-
-## Phase 1: Safe Core Entry
-
-**Outcome:** introduce the first JARVIS boundary without changing the user-visible HARVIS behavior.
-
-### Implemented slice
-
-`jarvis_core.py` supplies stdlib-only immutable request/response contracts and a `JarvisCore` facade with an injected `LegacyAdapter`. It imports no HARVIS runtime modules. The current command dispatcher remains the only execution implementation in this phase; this boundary does not claim provider-neutral tools, providers, persistence, UI, or lifecycle execution.
-
-The seam is in `kloom.py` immediately after an accepted command is constructed and `hud.heard(...)` runs, before the Telegram or local dispatch branches. Voice, typed HUD, and Telegram commands construct the same contract there. Telegram deliberately has no fabricated user or session identity.
-
-| Topic | Phase 1 behavior |
+| Item | Status |
 |---|---|
-| Feature flag | `jarvis_core.enabled` defaults to `false` in `load_config`; omitted configuration uses legacy dispatch. No user-specific `config.yaml` change is required. |
-| Enabled route | The shared facade invokes the injected legacy Telegram/local dispatcher exactly once; disabled mode invokes that dispatcher directly. |
-| Scope | Queue controls, raw audio, microphone/HUD startup, Telegram audio download, providers, tools, storage, and UI stay outside the core. |
-| Cancellation | The contract represents cancellation without changing the existing abort event or turn behavior. |
-| Rollback | Keep `jarvis_core.enabled` absent or `false`; removing the facade call and root module/test restores the prior direct route without touching runtime subsystems. |
+| Phase 0 architecture audit | Documented in `CURRENT_ARCHITECTURE.md` |
+| `harvis-stable` tag | Not created |
+| Phase 1 Core | Implemented in commit `09fa39c` on `feat/jarvis-core` |
+| Phase 1 manual microphone/HUD smoke validation | Pending |
+| Runtime OpenRouter, Supabase, or Web Speech API | Not present |
+| Final JavaScript framework, database, or provider | Not selected |
 
-### Evidence
+The Phase 1 route is disabled by default. With the flag off, HARVIS keeps its legacy behavior. Phase 1 does not authorize a wholesale rewrite or the implementation of later capabilities.
 
-Run `.venv\Scripts\python.exe test_jarvis_core.py` for deterministic contract and delegation checks. Run `.venv\Scripts\python.exe test_startup.py` for the existing focused startup checks. Manual microphone and HUD smoke validation remains pending and is required before treating this compatibility route as operationally proven.
+## Phase 1: Legacy-Compatible Core
 
-**Acceptance conditions:** HARVIS remains runnable; the legacy route remains available; the facade does not change provider, tool, persistence, or output behavior; rollback is explicit.
+**Goal:** establish a small, reversible Core boundary while retaining the existing HARVIS turn path.
 
-## Phase 2: Controlled Capabilities
+Delivered scope:
 
-**Outcome:** all effectful tool calls have a single policy boundary.
+- immutable command request, response, error, cancellation, and output-target contracts;
+- a legacy adapter and a default-off dispatcher selection;
+- a composition seam after accepted HUD input, before the existing legacy dispatch;
+- configuration defaulting `jarvis_core.enabled` to `false`.
 
-1. Introduce `ToolGateway` in compatibility/observation mode.
-2. Add typed validation, risk classification, authorization, transaction-bound approval, audit events, timeouts, and cancellation.
-3. Migrate tools by risk class, beginning with low-risk read-only operations.
-4. Replace SSH regex-denylist handling and prompt-only confirmations with allowlisted operations and bound approvals.
+The Core is currently a compatibility facade. It delegates enabled turns to legacy behavior; it does not replace providers, tools, memory, voice, or the HUD.
 
-**Acceptance conditions:** no migrated effectful tool bypasses the gateway; UI actions cannot grant execution authority; approval evidence identifies one exact operation and expires.
+### Pending Validation
 
-## Phase 3: Replaceable Runtime Dependencies
+Manual smoke validation remains required before relying on the enabled route:
 
-**Outcome:** providers, state, tracing, and lifecycle can evolve without expanding the orchestrator.
+- microphone ingress still reaches the expected legacy behavior;
+- typed HUD ingress still reaches the expected legacy behavior;
+- the HUD continues to display and speech output continues to behave as expected;
+- disabling the flag restores the legacy route without behavior drift.
 
-1. Wrap the current Claude and OpenAI-compatible provider paths behind a normalized provider interface.
-2. Place local file persistence and traces behind storage and tracing ports; retain file-backed adapters initially.
-3. Introduce injected runtime context and lifecycle supervision for audio, providers, skills, and watchers.
+No manual validation or production-readiness result is claimed by this plan.
 
-**Acceptance conditions:** current providers remain usable; no database migration is required; lifecycle ownership and cancellation are explicit.
+## Phase 2 Entry Gate
 
-## Deferred Decisions
+Do not begin Phase 2 runtime work until all of the following are true:
 
-The following require later evidence and a focused decision record:
+- the manual Phase 1 compatibility smoke validation is recorded;
+- an intentional HARVIS baseline commit is selected; creating `harvis-stable` remains a separate decision and has not occurred;
+- the policy-gateway design is agreed, including typed operations, risk classification, authorization, transaction-bound approval, redacted audit events, timeouts, and cancellation;
+- the next slice has a default-safe feature flag and a scoped rollback path.
 
-| Topic | Phase 0 status |
-|---|---|
-| Framework and language layout | Unselected |
-| Database or hosted persistence | Unselected; local files remain current |
-| Provider expansion or replacement | Unselected; current providers remain Claude, Ollama, Groq, Kimi, OpenAI, and Gemini |
-| OpenRouter, Supabase, Web Speech API | Not current runtime integrations; future options only |
-| Planner, agents, proactive events, vision, and broader automation | Deferred until the core boundaries and policy gateway are proven |
+## Sequenced Future Work
 
-## Global Completion Rule
+The following is order of discovery, not an implementation commitment or milestone record.
 
-A slice completes only with documented scope, runnable legacy fallback, validation evidence, explicit rollback, updated security posture, and no unreviewed expansion into unrelated architecture decisions.
+1. Route effectful capabilities through a compatibility-mode `ToolGateway` and design policy enforcement.
+2. Isolate provider selection behind normalized request and response contracts.
+3. Put local persistence and tracing behind storage and tracing ports before changing storage products.
+4. Introduce explicit inbound metadata, runtime context, and lifecycle supervision where the existing seams support them.
+5. Add memory, planning, agents, voice evolution, events, and a Command Center only when their prerequisite contracts and controls exist.
+
+Provider choices, a JavaScript framework, a database, hosted services, and agent runtimes remain open decisions. OpenRouter, Supabase, and the Web Speech API must not be described as current runtime integrations.
+
+## Guardrails
+
+- Keep the legacy route available until an equivalent replacement is validated.
+- Do not delete legacy code merely because a target design exists.
+- Do not let a model, HUD, dynamic skill, or remote channel directly execute sensitive operations.
+- Do not build a future HUD, knowledge graph, full memory engine, new agent runtime, or Voice v2 ahead of its approved phase.
+- Treat completion claims as evidence-based: record validation before declaring a capability ready.
+
+## Completion Standard
+
+Each future slice should be independently reviewable, default-safe, documented, and removable without changing unrelated behavior. Validation must state what actually ran and what remains manual or unverified.
