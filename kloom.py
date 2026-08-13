@@ -459,6 +459,10 @@ async def main():
     homelab.VAULTS = [v.rstrip("/") for v in _vaults if v]
     homelab.VAULT = homelab.VAULTS[0] if homelab.VAULTS else ""
     homelab.HARVIS_DIR = f"{homelab.VAULT}/HARVIS" if homelab.VAULT else ""
+    _proyectos = cfg.get("tools", {}).get("proyectos", {}) or {}
+    proyectos.MEMORY_DIR = _proyectos.get("memory_dir", "") or ""
+    _codigo = cfg.get("tools", {}).get("codigo", {}) or {}
+    codigo.PROYECTOS = _codigo.get("projects_dir", "") or ""
     base_tools = (windows.TOOLS + claude_code.TOOLS + browser.TOOLS
                   + media.TOOLS + timers.TOOLS + proyectos.TOOLS
                   + memoria.TOOLS + homelab.TOOLS + codigo.TOOLS
