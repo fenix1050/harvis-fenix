@@ -1,6 +1,8 @@
 """Deterministic standalone checks for the Phase 1 JARVIS Core facade."""
 import asyncio
+import ast
 import importlib.util
+import sys
 from pathlib import Path
 
 from jarvis_core import (CommandRequest, CommandResponse, JarvisCore,
@@ -50,6 +52,39 @@ def test_legacy_delegation_preserves_source_and_output_targets():
     assert response.response_text == "sent"
     assert response.provider == "claude"
     assert response.output_targets == ("hud", "telegram")
+
+
+def test_hud_text_route_normalizes_and_delegates_once_unmodified():
+    handler_calls = []
+    adapter_calls = []
+    expected_response = CommandResponse(
+        "calendar opened", chunks=("calendar", " opened"), provider="claude",
+        metadata={"legacy": True}, output_targets=("hud",),
+    )
+
+    async def legacy_harvis_handler(request):
+        handler_calls.append(request)
+        assert request.command == "open calendar"
+        assert request.source == "hud"
+        assert request.metadata == {"typed": True, "origin": "hud-input"}
+        return expected_response
+
+    class TrackingLegacyAdapter(LegacyAdapter):
+        async def dispatch(self, request):
+            adapter_calls.append(request)
+            return await super().dispatch(request)
+
+    request = CommandRequest(
+        "  open calendar  ", "hud",
+        metadata={"typed": True, "origin": "hud-input"}, output_targets=("hud",),
+    )
+    response = asyncio.run(
+        JarvisCore(TrackingLegacyAdapter(legacy_harvis_handler)).dispatch(request))
+
+    assert request.command == "open calendar"
+    assert adapter_calls == [request]
+    assert handler_calls == [request]
+    assert response is expected_response
 
 
 def test_core_returns_structured_response_when_legacy_raises():
@@ -102,16 +137,26 @@ def test_core_preserves_cancellation_from_legacy():
 def test_core_has_no_harvis_runtime_imports():
     source = Path(importlib.util.find_spec("jarvis_core").origin).read_text(
         encoding="utf-8")
-    forbidden = ("import kloom", "from kloom", "import hud", "from hud",
-                 "import oido", "from oido", "import boca", "from boca",
-                 "import cerebro", "from cerebro", "import tools", "from tools")
-    assert not any(item in source for item in forbidden)
+    imported_roots = set()
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            imported_roots.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported_roots.add(node.module.split(".", 1)[0])
+
+    forbidden_roots = {
+        "kloom", "hud", "oido", "boca", "cerebro", "tools",
+        "hermes", "claude", "claude_code", "claudecode",
+    }
+    assert not imported_roots & forbidden_roots
+    assert not imported_roots - sys.stdlib_module_names
 
 
 if __name__ == "__main__":
     test_request_normalizes_and_freezes_contract_data()
     test_response_structure_and_cancellation_representation()
     test_legacy_delegation_preserves_source_and_output_targets()
+    test_hud_text_route_normalizes_and_delegates_once_unmodified()
     test_core_returns_structured_response_when_legacy_raises()
     test_disabled_default_and_enabled_flag()
     test_load_config_defaults_core_to_disabled()

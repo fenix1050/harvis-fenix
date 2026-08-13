@@ -1,6 +1,7 @@
 .venv/
 __pycache__/
 *.pyc
+.codegraph/
 
 # Datos personales del runtime — JAMÁS commitear
 kloom.log*

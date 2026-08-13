@@ -28,6 +28,16 @@ Delivered scope:
 
 The Core is currently a compatibility facade. It delegates enabled turns to legacy behavior; it does not replace providers, tools, memory, voice, or the HUD.
 
+### Non-Microphone Validation Evidence (2026-08-13)
+
+- Passed with the project `.venv`: `test_hud.py`, `test_jarvis_core.py`, `test_startup.py`, `test_registry.py`, and `test_jarvis.py`; `py_compile` and diff checks also passed. `test_jarvis.py` emits expected mocked failure traces while exiting successfully.
+- Passed: `git diff --check`.
+- `test_hud.py` opens the real pywebview HUD test window and verifies pending messages, state, and `Hud.send_text` delivery to its sink.
+- The HUD test was corrected to assert the live HUD's three `#brain-sel` options rather than stale `#brains button` controls. This was a stale test assertion, not a HUD runtime defect.
+- Core tests cover request normalization and immutability; HUD/text Core -> LegacyAdapter -> injected legacy handler delegation exactly once with response preservation; disabled-default versus enabled feature flag behavior; structured error conversion; cancellation; source and output preservation; and direct stdlib-only imports. The latter confirms no direct microphone, UI, concrete provider, Hermes, or Claude Code dependencies.
+- These silent checks do not validate the production `kloom.main` path from full HUD text through Core and `LegacyAdapter` to a live LLM tool and HUD response. Before its queue loop, the application unconditionally initializes STT, pygame/Boca, provider connection setup, and the Oido microphone; that chain must not be described as validated.
+- `package.json` is absent, so `npm test` and `npm run lint` are not applicable and were not run.
+
 ### Pending Validation
 
 Manual smoke validation remains required before relying on the enabled route:
@@ -37,7 +47,7 @@ Manual smoke validation remains required before relying on the enabled route:
 - the HUD continues to display and speech output continues to behave as expected;
 - disabling the flag restores the legacy route without behavior drift.
 
-No manual validation or production-readiness result is claimed by this plan.
+Manual microphone/HUD smoke validation remains pending: startup, typed HUD validation against the live runtime, real voice input, one tool, expected HUD and real TTS output, and real voice-failure recovery. Manual confirmation remains required before the Core enabled route is operationally validated. `harvis-stable` is a local provisional tag at the approved pre-Core baseline `800294c`; it has not been pushed.
 
 ## Phase 2 Entry Gate
 

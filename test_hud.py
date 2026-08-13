@@ -33,12 +33,17 @@ async def checks():
         msgs = hud.window.evaluate_js(
             "document.querySelectorAll('.msg').length")
         estado = hud.window.evaluate_js("document.body.className")
-        brains = hud.window.evaluate_js(
-            "document.querySelectorAll('#brains button').length")
+        brains = 0
+        for _ in range(20):
+            brains = hud.window.evaluate_js(
+                "document.querySelectorAll('#brain-sel option').length")
+            if brains == 3:
+                break
+            await asyncio.sleep(0.1)
         print(f"msgs={msgs} estado={estado!r} brains={brains}")
         assert msgs == 2, f"esperaba 2 mensajes, hay {msgs}"
         assert "thinking" in estado, estado
-        assert brains == 3, brains
+        assert brains == 3, f"esperaba 3 opciones de cerebro, hay {brains}"
 
         hud.send_text("abrí el bloc de notas")
         await asyncio.sleep(0.3)
