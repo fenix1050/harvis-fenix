@@ -416,6 +416,19 @@ async def fallback_cerebro(cfg: dict, tools, actual: str):
     return None, None
 
 
+def startup_failure_message(component: str, error: Exception) -> str:
+    """Actionable Spanish startup feedback; the exception remains in the log."""
+    detail = str(error).lower()
+    if component == "micrófono":
+        if "sample rate" in detail:
+            return ("No pude abrir el micrófono con esa frecuencia. Revisá "
+                    "audio.capture_sample_rate en config.yaml.")
+        return ("No pude abrir el micrófono. Revisá que esté conectado y "
+                "seleccioná un dispositivo válido en config.yaml.")
+    return ("No pude iniciar el reconocimiento de voz. Revisá el modelo y "
+            "dispositivo configurados en config.yaml.")
+
+
 async def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -453,6 +466,78 @@ async def main():
     skills_tools, skills_info, redactor_buffer, skills_watchers = cargar_skills(cfg)
     all_tools = base_tools + skills_tools
 
+    loop = asyncio.get_running_loop()
+    runtime = {"oido": None, "boca": None, "abort_ev": None}
+
+    class _NoHud:
+        def __getattr__(self, _):
+            return lambda *a: None
+
+    hud = _NoHud()
+
+    def _enqueue(kind, payload=None):
+        oido = runtime["oido"]
+        if oido is not None:
+            oido.queue.put_nowait((kind, payload))
+
+    def _abort_from_hud():
+        if runtime["boca"] is not None:
+            runtime["boca"].stop()
+        if runtime["abort_ev"] is not None:
+            runtime["abort_ev"].set()
+
+    if (cfg.get("hud") or {}).get("enabled", True):
+        from hud import Hud
+        providers = list((cfg.get("llm", {}).get("providers") or {}))
+
+        def _save_desde_hud(payload):
+            word_antes = (cfg.get("wake") or {}).get("word", "harvis")
+            lang_antes = cfg.get("lang")
+            r = guardar_comandos(cfg, payload)
+            word_ahora = (cfg.get("wake") or {}).get("word", "harvis")
+            if cfg.get("lang") != lang_antes:
+                loop.call_soon_threadsafe(_enqueue, "reload_skills")
+            if word_ahora != word_antes:
+                nombre = word_ahora.capitalize()
+                cfg["display_name"] = nombre
+                hud.set_name(nombre)
+                loop.call_soon_threadsafe(_enqueue, "reload_skills")
+                r += (f" I'm called {nombre} now."
+                      if cfg.get("lang") == "en"
+                      else f" Ahora me llamo {nombre}.")
+            return r
+
+        def _skills_data():
+            return {"wake": {"word": cfg.get("wake", {}).get("word", ""),
+                             "aliases": cfg.get("wake", {}).get("aliases", [])},
+                    "comandos": cfg.get("comandos", {}),
+                    "briefing": cfg.get("briefing", {}),
+                    "lang": cfg.get("lang"),
+                    "skills": skills_info}
+
+        hud = Hud(cfg, loop, lambda text: _enqueue("text", text), providers,
+                  mic_sink=lambda: _enqueue("mic"),
+                  skills_data=_skills_data, save_fn=_save_desde_hud,
+                  reload_sink=lambda: _enqueue("reload_skills"),
+                  reset_sink=lambda: _enqueue("reset"),
+                  abort_sink=_abort_from_hud, skills_dir=SKILLS_DIR)
+        hud.start()
+        hud.set_brain(cfg.get("llm", {}).get("brain", "claude"))
+        if cfg.get("display_name", "Harvis") != "Harvis":
+            hud.set_name(cfg["display_name"])
+        hud.set_state("thinking")
+        hud.actividad("Iniciando HARVIS…")
+
+    async def _startup_failure(component: str, error: Exception):
+        message = startup_failure_message(component, error)
+        log.exception("falló el arranque de %s", component)
+        print(message, file=sys.stderr, flush=True)
+        hud.set_state("error")
+        hud.actividad("HARVIS no pudo iniciar")
+        hud.aviso(message)
+        if not isinstance(hud, _NoHud):
+            await asyncio.Event().wait()
+
     from huella import Huella
     huella = Huella.cargar(os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "dataset", "enroll"))
@@ -472,11 +557,19 @@ async def main():
     except Exception:
         pass
 
-    print("Cargando Whisper large-v3 en GPU...", flush=True)
-    stt = stt_mod.Stt(cfg)
-    await asyncio.to_thread(stt.warm_up)
+    configured_stt = stt_mod.configured_status(cfg)
+    print(f"Cargando {configured_stt}...", flush=True)
+    hud.actividad(f"Cargando {configured_stt}…")
+    try:
+        stt = stt_mod.Stt(cfg)
+        await asyncio.to_thread(stt.warm_up)
+    except Exception as error:
+        await _startup_failure("reconocimiento de voz", error)
+        return
+    hud.actividad(f"{stt.status} listo")
 
     boca = Boca(cfg)
+    runtime["boca"] = boca
     brain_actual = (cfg.get("llm") or {}).get("brain", "claude")
     cerebro = crear_cerebro(cfg, all_tools)
 
@@ -493,65 +586,14 @@ async def main():
                           brain_actual)
     asyncio.create_task(_conectar_cerebro(cerebro))
 
-    loop = asyncio.get_running_loop()
-    oido = Oido(cfg, loop)
-    oido.start()
-
-
-    class _NoHud:
-        def __getattr__(self, _):
-            return lambda *a: None
-
-    hud = _NoHud()
-    if (cfg.get("hud") or {}).get("enabled", True):
-        from hud import Hud
-        providers = list((cfg.get("llm", {}).get("providers") or {}))
-        def _save_desde_hud(payload):
-            word_antes = (cfg.get("wake") or {}).get("word", "harvis")
-            lang_antes = cfg.get("lang")
-            r = guardar_comandos(cfg, payload)
-            word_ahora = (cfg.get("wake") or {}).get("word", "harvis")
-            if cfg.get("lang") != lang_antes:
-                # el sufijo de idioma del prompt vive en el cerebro: se
-                # recrea por el mismo camino que la instalación de skills
-                loop.call_soon_threadsafe(
-                    oido.queue.put_nowait, ("reload_skills", None))
-            if word_ahora != word_antes:
-                nombre = word_ahora.capitalize()
-                cfg["display_name"] = nombre
-                hud.set_name(nombre)
-                # el cerebro toma el nombre nuevo recreándose (mismo camino
-                # que la instalación de skills). Corre en el thread del
-                # webview → threadsafe.
-                loop.call_soon_threadsafe(
-                    oido.queue.put_nowait, ("reload_skills", None))
-                r += (f" I'm called {nombre} now."
-                      if cfg.get("lang") == "en"
-                      else f" Ahora me llamo {nombre}.")
-            return r
-
-        def _skills_data():
-            return {"wake": {"word": cfg.get("wake", {}).get("word", ""),
-                             "aliases": cfg.get("wake", {}).get("aliases", [])},
-                    "comandos": cfg.get("comandos", {}),
-                    "briefing": cfg.get("briefing", {}),
-                    "lang": cfg.get("lang"),
-                    "skills": skills_info}
-
-        hud = Hud(cfg, loop,
-                  lambda t: oido.queue.put_nowait(("text", t)), providers,
-                  mic_sink=lambda: oido.queue.put_nowait(("mic", None)),
-                  skills_data=_skills_data,
-                  save_fn=_save_desde_hud,
-                  reload_sink=lambda: oido.queue.put_nowait(
-                      ("reload_skills", None)),
-                  reset_sink=lambda: oido.queue.put_nowait(("reset", None)),
-                  abort_sink=lambda: (boca.stop(), abort_ev.set()),
-                  skills_dir=SKILLS_DIR)
-        hud.start()
-        hud.set_brain(cfg.get("llm", {}).get("brain", "claude"))
-        if cfg.get("display_name", "Harvis") != "Harvis":
-            hud.set_name(cfg["display_name"])
+    hud.actividad("Abriendo micrófono…")
+    try:
+        oido = Oido(cfg, loop)
+        runtime["oido"] = oido
+        oido.start()
+    except Exception as error:
+        await _startup_failure("micrófono", error)
+        return
 
     # Estados granulares en el HUD: "Leyendo Teams…" en vez de "pensando…"
     # a secas. registry avisa al ARRANCAR cada tool, con cualquier driver.
@@ -775,6 +817,8 @@ async def main():
     ptt_key = (cfg.get("ptt") or {}).get("key", "f8").upper()
     print(f"\n🎤 KLOOM OS listo. Decí «{wake_word}, ...» para comandos, "
           f"mantené {ptt_key} para dictar. Ctrl+C para salir.\n", flush=True)
+    hud.set_state("idle")
+    hud.actividad("Listo para escuchar")
 
     awaiting_command_until = 0.0  # ventana post-"¿señor?" sin wake word
     chat_mode = False              # todo lo que se oiga va al cerebro
@@ -824,6 +868,7 @@ async def main():
 
     # "Cortala": F9 o botón ⏹ — calla la voz al instante y aborta el turno.
     abort_ev = asyncio.Event()
+    runtime["abort_ev"] = abort_ev
     oido.on_abort = lambda: loop.call_soon_threadsafe(
         lambda: (boca.stop(), abort_ev.set()))
 

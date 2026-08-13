@@ -23,6 +23,14 @@ log = logging.getLogger("kloom.stt")
 SAMPLE_RATE = 16000
 
 
+def configured_status(cfg: dict) -> str:
+    """Human-readable STT status without loading the model."""
+    scfg = cfg.get("stt") or {}
+    model = scfg.get("model", "large-v3")
+    device = "GPU" if scfg.get("device", "cuda") == "cuda" else "CPU"
+    return f"Whisper {model} en {device}"
+
+
 class Stt:
     def __init__(self, cfg: dict):
         scfg = cfg.get("stt") or {}
@@ -64,6 +72,8 @@ class Stt:
             (re.compile(c["pattern"]), c["replace"])
             for c in scfg.get("text_corrections", [])]
         model = scfg.get("model", "large-v3")
+        self.model_name = model
+        self.device = "cuda" if scfg.get("device", "cuda") == "cuda" else "cpu"
         if scfg.get("device", "cuda") == "cuda":
             try:
                 self.model = WhisperModel(model, device="cuda",
@@ -73,8 +83,15 @@ class Stt:
                 log.warning("CUDA falló (%s) — cayendo a medium/CPU", e)
                 self.model = WhisperModel("medium", device="cpu",
                                           compute_type="int8")
+                self.model_name = "medium"
+                self.device = "cpu"
         else:
             self.model = WhisperModel(model, device="cpu", compute_type="int8")
+
+    @property
+    def status(self) -> str:
+        device = "GPU" if self.device == "cuda" else "CPU"
+        return f"Whisper {self.model_name} en {device}"
 
     def _idioma(self) -> str | None:
         if self.language == "auto":
