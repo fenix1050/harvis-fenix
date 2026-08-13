@@ -20,6 +20,8 @@ if sys.stderr is None:
 import yaml
 
 import trazas
+from jarvis_core import (CommandRequest, CommandResponse, dispatch as dispatch_core,
+                         is_enabled as jarvis_core_enabled)
 import stt as stt_mod  # importar primero: arregla el PATH de las DLL CUDA
 from boca import Boca, beep_error, beep_listening, beep_ok, beep_wake
 from cerebro import (BRAINS, SuscripcionBloqueada, crear_cerebro,
@@ -194,6 +196,12 @@ def load_config(path="config.yaml") -> dict:
     except Exception:
         log.exception("comandos.yaml ilegible, sigo con defaults")
     aplicar_comandos(cfg)
+    # Phase 1 is opt-in: omitted configuration must preserve legacy dispatch.
+    core_cfg = cfg.get("jarvis_core")
+    if not isinstance(core_cfg, dict):
+        cfg["jarvis_core"] = {"enabled": False}
+    else:
+        core_cfg.setdefault("enabled", False)
     # Nombre visible = wake word capitalizado; renombrar el wake renombra
     # la app entera (prompt del cerebro y correcciones de texto incluidos).
     word = str((cfg.get("wake") or {}).get("word", "harvis")).strip()
@@ -906,6 +914,287 @@ async def main():
     max_base = float((cfg.get("vad") or {}).get("max_utterance_normal", 25))
     max_chat = float((cfg.get("vad") or {}).get("max_utterance", 90))
 
+    async def _execute_legacy_dispatch(request: CommandRequest):
+        """The pre-Core Telegram/local continuation, unchanged in behavior."""
+        nonlocal brain_actual, cerebro, chat_mode, coach_mode, music_mode
+        nonlocal privacy, coach_turnos, chat_last
+        command = request.command
+        por_tg = request.source == "telegram"
+        typed = bool(request.metadata["typed"])
+        pedido_es_musica = bool(request.metadata["requested_music"])
+
+        # Telegram: directo al cerebro — los modos de mic (privacidad,
+        # charla, señor?) no aplican a un chat remoto.
+        if por_tg:
+            trazas.nuevo_turno("telegram", command)
+            print(f"📱 «{command}»", flush=True)
+            hud.set_state("thinking")
+            try:
+                async with asyncio.timeout(brain_timeout):
+                    reply = await cerebro.ask(command)
+            except SuscripcionBloqueada:
+                actual = cuenta_activa()
+                nuevo = b = None
+                if actual and actual != getattr(cerebro, "cuenta", ""):
+                    try:
+                        nuevo = crear_cerebro(cfg, all_tools, brain=brain_actual)
+                        await nuevo.connect()
+                        b = brain_actual
+                    except Exception:
+                        log.exception("Claude con la cuenta nueva no conectó")
+                        nuevo = None
+                if nuevo is None:
+                    nuevo, b = await fallback_cerebro(cfg, all_tools, brain_actual)
+                if nuevo:
+                    await cerebro.close()
+                    cerebro = nuevo
+                    brain_actual = b
+                    hud.set_brain(b)
+                    if type(nuevo).__name__ == "CerebroClaude":
+                        await tg.send(f"Sigo — cuenta nueva de Claude: {actual}.")
+                    else:
+                        await tg.send("La cuenta de Claude no permite uso "
+                                      f"headless; sigo con {b.capitalize()}.")
+                    oido.queue.put_nowait(("tg", command))
+                else:
+                    await tg.send("La cuenta de Claude no permite uso "
+                                  "headless y no tengo otro cerebro "
+                                  "disponible, señor.")
+                hud.set_state("idle")
+                return
+            except TimeoutError:
+                reply = "Eso me llevó demasiado y lo corté, señor."
+            except Exception:
+                log.exception("cerebro reventó (tg)")
+                reply = "Se me rompió algo procesando eso, señor."
+            reply = podar_senores(_MARKDOWN.sub("", reply), {})
+            hud.reply(reply)
+            hud.set_state("idle")
+            memoria.append_historial(command, reply)
+            trazas.cerrar_turno(reply)
+            await tg.send(reply)
+            if pedido_musica["on"]:
+                pedido_musica["on"] = False
+                music_mode = True
+                chat_mode = coach_mode = False
+                hud.actividad("♪ modo música")
+                log.info("modo música ON (tg)")
+            return
+
+        if PRIVACY_RE.search(sin_tildes(command)):
+            privacy = True
+            chat_mode = coach_mode = music_mode = False
+            oido.mute()
+            hud.set_state("muted")
+            print("🔇 privacidad ON", flush=True)
+            log.info("privacidad ON (voz)")
+            await boca.say("Micrófono apagado, señor. Cuando quiera que "
+                           "vuelva a escuchar, tóqueme el micrófono en el panel.")
+            return
+
+        target = parse_switch(command)
+        if target:
+            oido.mute()
+            try:
+                nuevo = crear_cerebro(cfg, all_tools, brain=target)
+                await nuevo.connect()
+                await cerebro.close()
+                descartados = len(getattr(cerebro, "messages", [])) - 1
+                cerebro = nuevo
+                log.info("switch de cerebro a %s (historial descartado: %s)",
+                         target, max(descartados, 0))
+                reply = f"Listo señor, ahora piensa {target.capitalize()}."
+                brain_actual = target
+                hud.set_brain(target)
+            except Exception:
+                log.exception("switch a %s falló", target)
+                reply = f"No pude cambiar a {target.capitalize()}, señor."
+                beep_error()
+                hud.error_flash()
+            print(f"🔊 {reply}", flush=True)
+            hud.reply(reply)
+            await boca.say(reply)
+            oido.unmute()
+            return
+
+        print(f"🧠 «{command}»", flush=True)
+        log.info("wake: %r", command)
+        pedida = _playlist_pedida(command)
+        if pedida:
+            trazas.nuevo_turno("hud" if typed else "voz", command)
+            hud.actividad(f"♪ {pedida}")
+            oido.mute()
+            t0 = time.monotonic()
+            try:
+                res = await browser.youtube_music.handler({"nombre": pedida})
+            except Exception:
+                log.exception("atajo de playlist falló")
+                res = ""
+            trazas.ev("tool", nombre="youtube_music", ok=bool(res),
+                      dur_ms=int((time.monotonic() - t0) * 1000))
+            sonando = "SONANDO" in res or "sonando, verificado" in res
+            oido.unmute()
+            hud.set_state("idle")
+            if sonando:
+                music_mode = True
+                beep_ok()
+                hud.reply(f"✔ {pedida}")
+            else:
+                beep_error()
+                hud.error_flash()
+                hud.reply(f"✖ {pedida}")
+                await boca.say(f"No pude poner {pedida}, señor.")
+            log.info("atajo playlist %r: %s", pedida, "sonando" if sonando else "falló")
+            return
+
+        objetivo = cerebro_coach if (coach_mode and cerebro_coach) else cerebro
+        trazas.nuevo_turno("hud" if typed else "voz", command)
+        trazas.ev("cerebro", brain=coach_brain if objetivo is cerebro_coach
+                  else brain_actual)
+        hud.set_state("thinking")
+        oido.mute()
+        abort_ev.clear()
+        tarea = espera_abort = None
+        try:
+            turno_mudo = (pedido_es_musica or music_mode) and not coach_mode
+            async with asyncio.timeout(brain_timeout):
+                if coach_mode:
+                    pedido = "[modo coach] " + command
+                elif turno_mudo:
+                    pedido = "[modo música] " + command
+                else:
+                    pedido = command
+                if turno_mudo:
+                    tarea = asyncio.create_task(objetivo.ask(pedido))
+                else:
+                    tarea = asyncio.create_task(responder_en_vivo(objetivo.ask_stream(pedido)))
+                espera_abort = asyncio.create_task(abort_ev.wait())
+                await asyncio.wait({tarea, espera_abort},
+                                   return_when=asyncio.FIRST_COMPLETED)
+                if not tarea.done():
+                    raise _Abortado
+                reply = tarea.result()
+            if not reply:
+                reply = "Hecho, señor."
+                if not turno_mudo:
+                    hud.reply(reply)
+                    await boca.say(reply)
+        except _Abortado:
+            log.info("turno abortado por el usuario")
+            reply = "[cortado]"
+            beep_ok()
+            hud.aviso("Cortado, señor.")
+            if objetivo is cerebro and type(cerebro).__name__ == "CerebroClaude":
+                try:
+                    nuevo = crear_cerebro(cfg, all_tools, brain=brain_actual)
+                    await nuevo.connect()
+                    await cerebro.close()
+                    cerebro = nuevo
+                except Exception:
+                    log.exception("reconexión post-aborto falló")
+        except SuscripcionBloqueada:
+            actual = cuenta_activa()
+            cambio = (objetivo is cerebro and actual
+                      and actual != getattr(cerebro, "cuenta", ""))
+            nuevo = b = None
+            if cambio:
+                log.info("login rotado (%s → %s): reintento Claude",
+                         getattr(cerebro, "cuenta", "?"), actual)
+                try:
+                    nuevo = crear_cerebro(cfg, all_tools, brain=brain_actual)
+                    await nuevo.connect()
+                    b = brain_actual
+                except Exception:
+                    log.exception("Claude con la cuenta nueva no conectó")
+                    nuevo = None
+            if nuevo is None:
+                log.warning("cuenta de Claude sin acceso headless; busco cerebro de respaldo")
+                nuevo, b = await fallback_cerebro(cfg, all_tools, brain_actual)
+            if nuevo and objetivo is cerebro:
+                await cerebro.close()
+                cerebro = nuevo
+                brain_actual = b
+                hud.set_brain(b)
+                if type(nuevo).__name__ == "CerebroClaude":
+                    reply = f"Sigo, señor — cuenta nueva de Claude: {actual}."
+                else:
+                    reply = ("La cuenta de Claude no permite uso headless "
+                             f"ahora, señor; sigo con {b.capitalize()}.")
+                hud.reply(reply)
+                await boca.say(reply)
+                oido.queue.put_nowait(("text", command))
+            else:
+                if nuevo:
+                    await nuevo.close()
+                reply = ("La cuenta de Claude no permite uso headless, señor, "
+                         "y no tengo otro cerebro disponible. Cambiá de cuenta "
+                         "o configurá groq, gemini u ollama.")
+                beep_error()
+                hud.error_flash()
+                hud.reply(reply)
+                await boca.say(reply)
+        except TimeoutError:
+            log.warning("turno cortado tras %ss", brain_timeout)
+            reply = ("Eso me estaba llevando demasiado y lo corté, señor. "
+                     "Puede que haya quedado a medio hacer.")
+            beep_error()
+            hud.error_flash()
+            hud.reply(reply)
+            await boca.say(reply)
+        except Exception:
+            log.exception("cerebro reventó")
+            reply = "Se me rompió algo procesando eso, señor."
+            beep_error()
+            hud.error_flash()
+            hud.reply(reply)
+            await boca.say(reply)
+        for t in (tarea, espera_abort):
+            if t is not None and not t.done():
+                t.cancel()
+        if turno_mudo:
+            reply = podar_senores(_MARKDOWN.sub("", reply), {})
+            hud.reply("✔ " + reply)
+        hud.reply_end()
+        print(f"🔊 {reply}", flush=True)
+        if objetivo is cerebro_coach:
+            coach_turnos += 1
+        memoria.append_historial(command, reply)
+        trazas.cerrar_turno(reply)
+        if pedido_musica["on"]:
+            pedido_musica["on"] = False
+            music_mode = True
+            chat_mode = coach_mode = False
+            oido.unmute()
+            hud.set_state("idle")
+            hud.actividad("♪ modo música: pausa, siguiente, poné tal tema… "
+                          "«modo normal» para salir")
+            log.info("modo música ON")
+            print("♪ modo música ON", flush=True)
+            return
+        oido.unmute()
+        if chat_mode:
+            chat_last = time.monotonic()
+            hud.set_state("chat")
+        elif music_mode:
+            hud.set_state("idle")
+            hud.actividad("♪ modo música — pausa, siguiente, poné tal tema… "
+                          "«modo normal» para salir")
+        else:
+            hud.set_state("idle")
+
+    async def _legacy_dispatch(request: CommandRequest) -> CommandResponse:
+        """Run the actual legacy dispatcher supplied to the Phase 1 facade."""
+        await _execute_legacy_dispatch(request)
+        return CommandResponse(
+            output_targets=request.output_targets,
+            cancelled=abort_ev.is_set(),
+        )
+
+    async def _accepted_command(request: CommandRequest) -> CommandResponse | None:
+        if not jarvis_core_enabled(cfg):
+            return None
+        return await dispatch_core(cfg, request, _legacy_dispatch)
+
     while True:
         # En charla/coach el VAD espera más antes de cortar: pausar para
         # pensar no es terminar de hablar, y los descargos son largos. En
@@ -1309,305 +1598,22 @@ async def main():
             continue
 
         hud.heard(("📱 " if por_tg else "") + command)
+        source = "telegram" if por_tg else "hud" if typed else "voice"
+        targets = ("hud", "telegram") if por_tg else ("hud", "speech")
+        request = CommandRequest(
+            command, source, metadata={"typed": typed,
+                                       "requested_music": pedido_es_musica},
+            mode="coach" if coach_mode else "music" if music_mode else None,
+            brain=brain_actual, output_targets=targets,
+            cancelled=abort_ev.is_set(),
+        )
         if not typed and save_wake_audio:
             asyncio.get_running_loop().run_in_executor(
                 None, guardar_wake, audio)
-
-        # Telegram: directo al cerebro — los modos de mic (privacidad,
-        # charla, señor?) no aplican a un chat remoto.
-        if por_tg:
-            trazas.nuevo_turno("telegram", command)
-            print(f"📱 «{command}»", flush=True)
-            hud.set_state("thinking")
-            try:
-                async with asyncio.timeout(brain_timeout):
-                    reply = await cerebro.ask(command)
-            except SuscripcionBloqueada:
-                actual = cuenta_activa()
-                nuevo = b = None
-                if actual and actual != getattr(cerebro, "cuenta", ""):
-                    try:
-                        nuevo = crear_cerebro(cfg, all_tools,
-                                              brain=brain_actual)
-                        await nuevo.connect()
-                        b = brain_actual
-                    except Exception:
-                        log.exception("Claude con la cuenta nueva "
-                                      "no conectó")
-                        nuevo = None
-                if nuevo is None:
-                    nuevo, b = await fallback_cerebro(cfg, all_tools,
-                                                      brain_actual)
-                if nuevo:
-                    await cerebro.close()
-                    cerebro = nuevo
-                    brain_actual = b
-                    hud.set_brain(b)
-                    if type(nuevo).__name__ == "CerebroClaude":
-                        await tg.send(f"Sigo — cuenta nueva de Claude: "
-                                      f"{actual}.")
-                    else:
-                        await tg.send(f"La cuenta de Claude no permite uso "
-                                      f"headless; sigo con "
-                                      f"{b.capitalize()}.")
-                    oido.queue.put_nowait(("tg", command))
-                else:
-                    await tg.send("La cuenta de Claude no permite uso "
-                                  "headless y no tengo otro cerebro "
-                                  "disponible, señor.")
-                hud.set_state("idle")
-                continue
-            except TimeoutError:
-                reply = "Eso me llevó demasiado y lo corté, señor."
-            except Exception:
-                log.exception("cerebro reventó (tg)")
-                reply = "Se me rompió algo procesando eso, señor."
-            reply = podar_senores(_MARKDOWN.sub("", reply), {})
-            hud.reply(reply)
-            hud.set_state("idle")
-            memoria.append_historial(command, reply)
-            trazas.cerrar_turno(reply)
-            await tg.send(reply)
-            if pedido_musica["on"]:   # música pedida desde el celu
-                pedido_musica["on"] = False
-                music_mode = True
-                chat_mode = coach_mode = False
-                hud.actividad("♪ modo música")
-                log.info("modo música ON (tg)")
+        if jarvis_core_enabled(cfg):
+            await _accepted_command(request)
             continue
-
-        # Modo privacidad por voz: mic apagado hasta el botón del HUD.
-        if PRIVACY_RE.search(sin_tildes(command)):
-            privacy = True
-            chat_mode = coach_mode = music_mode = False
-            oido.mute()
-            hud.set_state("muted")
-            print("🔇 privacidad ON", flush=True)
-            log.info("privacidad ON (voz)")
-            await boca.say("Micrófono apagado, señor. Cuando quiera que "
-                           "vuelva a escuchar, tóqueme el micrófono en el "
-                           "panel.")
-            continue  # sin unmute: queda sordo a propósito
-
-        # Cambio de cerebro por voz — antes del LLM: funciona aunque el
-        # cerebro actual esté roto. El viejo no se cierra hasta que el
-        # nuevo conectó.
-        target = parse_switch(command)
-        if target:
-            oido.mute()
-            try:
-                nuevo = crear_cerebro(cfg, all_tools, brain=target)
-                await nuevo.connect()
-                await cerebro.close()
-                descartados = len(getattr(cerebro, "messages", [])) - 1
-                cerebro = nuevo
-                log.info("switch de cerebro a %s (historial descartado: %s)",
-                         target, max(descartados, 0))
-                reply = f"Listo señor, ahora piensa {target.capitalize()}."
-                brain_actual = target
-                hud.set_brain(target)
-            except Exception as e:
-                log.exception("switch a %s falló", target)
-                reply = f"No pude cambiar a {target.capitalize()}, señor."
-                beep_error()
-                hud.error_flash()
-            print(f"🔊 {reply}", flush=True)
-            hud.reply(reply)
-            await boca.say(reply)
-            oido.unmute()
-            continue
-
-        print(f"🧠 «{command}»", flush=True)
-        log.info("wake: %r", command)
-
-        pedida = _playlist_pedida(command)
-        if pedida:
-            trazas.nuevo_turno("hud" if typed else "voz", command)
-            hud.actividad(f"♪ {pedida}")
-            oido.mute()
-            t0 = time.monotonic()
-            try:
-                res = await browser.youtube_music.handler({"nombre": pedida})
-            except Exception:
-                log.exception("atajo de playlist falló")
-                res = ""
-            trazas.ev("tool", nombre="youtube_music", ok=bool(res),
-                      dur_ms=int((time.monotonic() - t0) * 1000))
-            sonando = "SONANDO" in res or "sonando, verificado" in res
-            oido.unmute()
-            hud.set_state("idle")
-            if sonando:
-                music_mode = True
-                beep_ok()
-                hud.reply(f"✔ {pedida}")
-            else:
-                beep_error()
-                hud.error_flash()
-                hud.reply(f"✖ {pedida}")
-                await boca.say(f"No pude poner {pedida}, señor.")
-            log.info("atajo playlist %r: %s", pedida,
-                     "sonando" if sonando else "falló")
-            continue
-        objetivo = cerebro_coach if (coach_mode and cerebro_coach) \
-            else cerebro
-        trazas.nuevo_turno("hud" if typed else "voz", command)
-        trazas.ev("cerebro", brain=coach_brain if objetivo is cerebro_coach
-                  else brain_actual)
-        hud.set_state("thinking")
-        # mute = política de "cerebro ocupado": mientras piensa, el mic está
-        # cerrado — un comando dicho en el medio se descarta en el aire.
-        oido.mute()
-        abort_ev.clear()
-        tarea = espera_abort = None
-        try:
-            # Timeout de TODO el turno, cualquier driver: sin esto un cuelgue
-            # del SDK deja el mic muteado para siempre (= parece muerto).
-            # El stream habla cada oración apenas el cerebro la produce.
-            # F9/⏹ (abort_ev) corta voz y turno al instante.
-            turno_mudo = (pedido_es_musica or music_mode) and not coach_mode
-            async with asyncio.timeout(brain_timeout):
-                if coach_mode:
-                    pedido = "[modo coach] " + command
-                elif turno_mudo:
-                    pedido = "[modo música] " + command
-                else:
-                    pedido = command
-                if turno_mudo:
-                    # música: la acción sin VOZ (no interrumpir el tema);
-                    # el resultado va como ✔ al HUD.
-                    tarea = asyncio.create_task(objetivo.ask(pedido))
-                else:
-                    tarea = asyncio.create_task(
-                        responder_en_vivo(objetivo.ask_stream(pedido)))
-                espera_abort = asyncio.create_task(abort_ev.wait())
-                await asyncio.wait({tarea, espera_abort},
-                                   return_when=asyncio.FIRST_COMPLETED)
-                if not tarea.done():
-                    raise _Abortado
-                reply = tarea.result()
-            if not reply:
-                reply = "Hecho, señor."
-                if not turno_mudo:
-                    hud.reply(reply)
-                    await boca.say(reply)
-        except _Abortado:
-            log.info("turno abortado por el usuario")
-            reply = "[cortado]"
-            beep_ok()
-            hud.aviso("Cortado, señor.")
-            if objetivo is cerebro and type(cerebro).__name__ == "CerebroClaude":
-                # el stream del SDK quedó a medias: cliente fresco
-                try:
-                    nuevo = crear_cerebro(cfg, all_tools, brain=brain_actual)
-                    await nuevo.connect()
-                    await cerebro.close()
-                    cerebro = nuevo
-                except Exception:
-                    log.exception("reconexión post-aborto falló")
-        except SuscripcionBloqueada:
-            # La cuenta con la que ESTE cliente conectó no permite headless.
-            # Si el usuario ya rotó el login, se reintenta Claude con la
-            # cuenta nueva; si no (o si tampoco conecta), fallback.
-            actual = cuenta_activa()
-            cambio = (objetivo is cerebro and actual
-                      and actual != getattr(cerebro, "cuenta", ""))
-            nuevo = b = None
-            if cambio:
-                log.info("login rotado (%s → %s): reintento Claude",
-                         getattr(cerebro, "cuenta", "?"), actual)
-                try:
-                    nuevo = crear_cerebro(cfg, all_tools, brain=brain_actual)
-                    await nuevo.connect()
-                    b = brain_actual
-                except Exception:
-                    log.exception("Claude con la cuenta nueva no conectó")
-                    nuevo = None
-            if nuevo is None:
-                log.warning("cuenta de Claude sin acceso headless; "
-                            "busco cerebro de respaldo")
-                nuevo, b = await fallback_cerebro(cfg, all_tools,
-                                                  brain_actual)
-            if nuevo and objetivo is cerebro:
-                await cerebro.close()
-                cerebro = nuevo
-                brain_actual = b
-                hud.set_brain(b)
-                if type(nuevo).__name__ == "CerebroClaude":
-                    reply = (f"Sigo, señor — cuenta nueva de Claude: "
-                             f"{actual}.")
-                else:
-                    reply = (f"La cuenta de Claude no permite uso headless "
-                             f"ahora, señor; sigo con {b.capitalize()}.")
-                hud.reply(reply)
-                await boca.say(reply)
-                oido.queue.put_nowait(("text", command))
-            else:
-                if nuevo:
-                    await nuevo.close()
-                reply = ("La cuenta de Claude no permite uso headless, "
-                         "señor, y no tengo otro cerebro disponible. "
-                         "Cambiá de cuenta o configurá groq, gemini u "
-                         "ollama.")
-                beep_error()
-                hud.error_flash()
-                hud.reply(reply)
-                await boca.say(reply)
-        except TimeoutError:
-            log.warning("turno cortado tras %ss", brain_timeout)
-            reply = ("Eso me estaba llevando demasiado y lo corté, señor. "
-                     "Puede que haya quedado a medio hacer.")
-            beep_error()
-            hud.error_flash()
-            hud.reply(reply)
-            await boca.say(reply)
-        except Exception as e:
-            log.exception("cerebro reventó")
-            reply = "Se me rompió algo procesando eso, señor."
-            beep_error()
-            hud.error_flash()
-            hud.reply(reply)
-            await boca.say(reply)
-        for t in (tarea, espera_abort):
-            if t is not None and not t.done():
-                t.cancel()
-        if turno_mudo:
-            reply = podar_senores(_MARKDOWN.sub("", reply), {})
-            hud.reply("✔ " + reply)
-        # el texto ya se fue streameando al HUD oración por oración
-        hud.reply_end()
-        print(f"🔊 {reply}", flush=True)
-        if objetivo is cerebro_coach:
-            coach_turnos += 1
-        memoria.append_historial(command, reply)
-        trazas.cerrar_turno(reply)
-        # ¿Arrancó música en este turno? → MODO MÚSICA: escucha solo
-        # órdenes de música; la letra no matchea nada y se ignora.
-        if pedido_musica["on"]:
-            pedido_musica["on"] = False
-            music_mode = True
-            chat_mode = coach_mode = False
-            oido.unmute()
-            hud.set_state("idle")   # apagar el anillo de "pensando"
-            hud.actividad("♪ modo música: pausa, siguiente, poné tal "
-                          "tema… «modo normal» para salir")
-            log.info("modo música ON")
-            print("♪ modo música ON", flush=True)
-            continue   # sin ventana de followup
-        oido.unmute()
-        # Terminado el turno vuelve a esperar su nombre. Antes quedaba una
-        # ventana abierta para repreguntar sin nombrarlo, pero con alguien
-        # hablando cerca (o grabando un video) contestaba cualquier cosa:
-        # sin wake word solo escuchan los modos que el usuario enciende a
-        # propósito — charla, coach, redactor, música.
-        if chat_mode:
-            chat_last = time.monotonic()
-            hud.set_state("chat")
-        elif music_mode:
-            hud.set_state("idle")   # sin esto el anillo "pensando" queda
-            hud.actividad("♪ modo música — pausa, siguiente, poné tal "
-                          "tema… «modo normal» para salir")
-        else:
-            hud.set_state("idle")
+        await _execute_legacy_dispatch(request)
 
 
 def _run():

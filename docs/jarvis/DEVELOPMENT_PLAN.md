@@ -14,10 +14,23 @@ Phase 0 does not claim that OpenRouter, Supabase, or Web Speech API are current 
 
 **Outcome:** introduce the first JARVIS boundary without changing the user-visible HARVIS behavior.
 
-1. Define `InboundTurn` adapters for microphone, HUD text, and Telegram, including origin and identity metadata.
-2. Add a `TurnOrchestrator` facade that delegates to the legacy turn loop.
-3. Add a feature flag that chooses legacy behavior or the JARVIS-core facade.
-4. Document the default route, rollback route, and validation evidence.
+### Implemented slice
+
+`jarvis_core.py` supplies stdlib-only immutable request/response contracts and a `JarvisCore` facade with an injected `LegacyAdapter`. It imports no HARVIS runtime modules. The current command dispatcher remains the only execution implementation in this phase; this boundary does not claim provider-neutral tools, providers, persistence, UI, or lifecycle execution.
+
+The seam is in `kloom.py` immediately after an accepted command is constructed and `hud.heard(...)` runs, before the Telegram or local dispatch branches. Voice, typed HUD, and Telegram commands construct the same contract there. Telegram deliberately has no fabricated user or session identity.
+
+| Topic | Phase 1 behavior |
+|---|---|
+| Feature flag | `jarvis_core.enabled` defaults to `false` in `load_config`; omitted configuration uses legacy dispatch. No user-specific `config.yaml` change is required. |
+| Enabled route | The shared facade invokes the injected legacy Telegram/local dispatcher exactly once; disabled mode invokes that dispatcher directly. |
+| Scope | Queue controls, raw audio, microphone/HUD startup, Telegram audio download, providers, tools, storage, and UI stay outside the core. |
+| Cancellation | The contract represents cancellation without changing the existing abort event or turn behavior. |
+| Rollback | Keep `jarvis_core.enabled` absent or `false`; removing the facade call and root module/test restores the prior direct route without touching runtime subsystems. |
+
+### Evidence
+
+Run `.venv\Scripts\python.exe test_jarvis_core.py` for deterministic contract and delegation checks. Run `.venv\Scripts\python.exe test_startup.py` for the existing focused startup checks. Manual microphone and HUD smoke validation remains pending and is required before treating this compatibility route as operationally proven.
 
 **Acceptance conditions:** HARVIS remains runnable; the legacy route remains available; the facade does not change provider, tool, persistence, or output behavior; rollback is explicit.
 
