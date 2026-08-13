@@ -18,10 +18,10 @@ The Phase 1 route is disabled by default. With the flag off, HARVIS keeps its le
 ### Phase 1 Status
 
 ```text
-IMPLEMENTATION: COMPLETE
-AUTOMATED/SILENT VALIDATION: COMPLETE
-MANUAL AUDIO VALIDATION: PENDING
-FINAL CLOSURE: PENDING
+IMPLEMENTACIÓN: COMPLETA
+VALIDACIÓN AUTOMÁTICA/SILENCIOSA: COMPLETA
+VALIDACIÓN MANUAL DE AUDIO: PENDIENTE
+CIERRE DEFINITIVO: PENDIENTE
 ```
 
 ## Phase 1: Legacy-Compatible Core
@@ -49,14 +49,14 @@ The Core is currently a compatibility facade. It delegates enabled turns to lega
 
 ### Pending Validation
 
-Manual smoke validation remains required before relying on the enabled route:
+The only remaining Phase 1 closure criteria are:
 
-- microphone ingress still reaches the expected legacy behavior;
-- typed HUD ingress still reaches the expected legacy behavior;
-- the HUD continues to display and speech output continues to behave as expected;
-- disabling the flag restores the legacy route without behavior drift.
+- real microphone test;
+- real TTS test;
+- voice-failure recovery;
+- complete production smoke test with JARVIS Core enabled.
 
-Manual microphone/HUD smoke validation remains pending: startup, typed HUD validation against the live runtime, real voice input, one tool, expected HUD and real TTS output, and real voice-failure recovery. Manual confirmation remains required before the Core enabled route is operationally validated. `harvis-stable` is a local provisional tag at the approved pre-Core baseline `800294c`; it has not been pushed.
+`harvis-stable` exists locally, points to `800294c`, and has not been pushed. Manual confirmation remains required before the Core enabled route is operationally validated.
 
 ## Phase 2 Entry Gate
 
