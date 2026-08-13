@@ -7,13 +7,22 @@ JARVIS is an incremental evolution of HARVIS, not a rewrite. The current reposit
 | Item | Status |
 |---|---|
 | Phase 0 architecture audit | Documented in `CURRENT_ARCHITECTURE.md` |
-| `harvis-stable` tag | Not created |
+| `harvis-stable` tag | Local-only provisional tag at `800294c`; not pushed |
 | Phase 1 Core | Implemented in commit `09fa39c` on `feat/jarvis-core` |
 | Phase 1 manual microphone/HUD smoke validation | Pending |
 | Runtime OpenRouter, Supabase, or Web Speech API | Not present |
 | Final JavaScript framework, database, or provider | Not selected |
 
 The Phase 1 route is disabled by default. With the flag off, HARVIS keeps its legacy behavior. Phase 1 does not authorize a wholesale rewrite or the implementation of later capabilities.
+
+### Phase 1 Status
+
+```text
+IMPLEMENTATION: COMPLETE
+AUTOMATED/SILENT VALIDATION: COMPLETE
+MANUAL AUDIO VALIDATION: PENDING
+FINAL CLOSURE: PENDING
+```
 
 ## Phase 1: Legacy-Compatible Core
 
@@ -54,7 +63,7 @@ Manual microphone/HUD smoke validation remains pending: startup, typed HUD valid
 Do not begin Phase 2 runtime work until all of the following are true:
 
 - the manual Phase 1 compatibility smoke validation is recorded;
-- an intentional HARVIS baseline commit is selected; creating `harvis-stable` remains a separate decision and has not occurred;
+- the approved local `harvis-stable` baseline is validated by the remaining manual audio smoke tests before any tag publication decision;
 - the policy-gateway design is agreed, including typed operations, risk classification, authorization, transaction-bound approval, redacted audit events, timeouts, and cancellation;
 - the next slice has a default-safe feature flag and a scoped rollback path.
 
