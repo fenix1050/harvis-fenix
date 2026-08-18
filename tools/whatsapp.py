@@ -14,7 +14,7 @@ import urllib.parse
 
 from registry import kloom_tool
 
-log = logging.getLogger("kloom.tools.whatsapp")
+log = logging.getLogger("harvis.tools.whatsapp")
 
 _DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONTACTOS_FILE = os.path.join(_DIR, "contactos_whatsapp.json")

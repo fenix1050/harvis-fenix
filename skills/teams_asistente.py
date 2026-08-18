@@ -8,7 +8,7 @@ import time
 
 from registry import kloom_tool
 
-log = logging.getLogger("kloom.skills.teams")
+log = logging.getLogger("harvis.skills.teams")
 
 PROMPT = (
     "Teams completo: teams_read_chat(nombre) abre un chat y te da los "

@@ -3,7 +3,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 logging.basicConfig(level=logging.INFO, format="%(name)s %(message)s", stream=sys.stdout)
 
 async def main():
-    from kloom import load_config
+    from harvis import load_config
     from cerebro import CerebroClaude, crear_cerebro
     from tools import browser, claude_code, media, windows
     cfg = load_config()

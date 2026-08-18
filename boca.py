@@ -10,7 +10,7 @@ import winsound
 import edge_tts
 import pygame
 
-log = logging.getLogger("kloom.boca")
+log = logging.getLogger("harvis.boca")
 
 _FRASES = re.compile(r"(?<=[.!?…:]) +")
 

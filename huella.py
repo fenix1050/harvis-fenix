@@ -13,7 +13,7 @@ import wave
 
 import numpy as np
 
-log = logging.getLogger("kloom.huella")
+log = logging.getLogger("harvis.huella")
 
 SR = 16000
 _WIN, _HOP, _NFFT = 400, 160, 512      # 25 ms cada 10 ms

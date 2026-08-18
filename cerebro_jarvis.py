@@ -10,7 +10,7 @@ from openai import APIConnectionError, APIStatusError, AsyncOpenAI
 
 from registry import Tool, to_openai
 
-log = logging.getLogger("kloom.jarvis")
+log = logging.getLogger("harvis.jarvis")
 
 MAX_TURNS = 12          # mismo tope que el driver Claude
 REQUEST_TIMEOUT = 30    # por request

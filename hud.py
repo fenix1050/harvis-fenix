@@ -7,7 +7,7 @@ import logging
 import os
 import threading
 
-log = logging.getLogger("kloom.hud")
+log = logging.getLogger("harvis.hud")
 
 _AVATAR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                        "assets", "harvis.png")
@@ -39,27 +39,6 @@ try:
 except Exception:
     FONT_URI = ""
 
-# --- Banner de apps de KloomStudio (mismo que la versión open source).
-_PROMOS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                           "assets", "promos")
-# (slug, nombre, tagline, CTA, color de acento, url)
-_PROMOS_DATA = [
-    ("tv-optimizer", "TV Optimizer PRO",
-     "Build, test & optimize your TradingView strategy",
-     "START FREE", "#2de3c3", "https://app.optimizertrading.workers.dev"),
-    ("tucora", "TuCora", "Clarity for your relationships",
-     "GET APP", "#ff5f8f", "https://tucora.com.ar"),
-    ("ganancia-real", "Ganancia Real",
-     "Prices with real profit for your Tiendanube store",
-     "SEE MORE", "#3ddc84", "https://www.tiendanube.com/tienda-aplicaciones-nube/ganancia-real"),
-    ("digitala", "Digitala", "Digital delivery for your Tiendanube store",
-     "SEE MORE", "#4da3ff", "https://kloomstudio.com.ar/en/apps/digitala"),
-    ("harvis-sponsor", "Sponsor HARVIS",
-     "Keep it free — and license it for work",
-     "SPONSOR", "#db61a2", "https://github.com/sponsors/Kloom89"),
-]
-
-
 def _hud_lang(cfg: dict) -> str:
     """Idioma de la app (interfaz + oído + voz): lo guardado en config, o
     el del Windows del usuario la primera vez."""
@@ -73,28 +52,6 @@ def _hud_lang(cfg: dict) -> str:
         loc = ""
     return "es" if loc.startswith(("es", "spanish")) else "en"
 
-
-def _con_utm(url: str, slug: str) -> str:
-    """Sin esto el banner es ciego: no hay forma de saber si alguien lo
-    clickea, y un canal que no se mide no se puede mejorar."""
-    sep = "&" if "?" in url else "?"
-    return (f"{url}{sep}utm_source=harvis&utm_medium=hud_banner"
-            f"&utm_campaign={slug}")
-
-
-def _promos_json() -> str:
-    out = []
-    for slug, nombre, tag, cta, color, url in _PROMOS_DATA:
-        logo = ""
-        try:
-            ruta = os.path.join(_PROMOS_DIR, f"{slug}.png")
-            logo = ("data:image/png;base64,"
-                    + base64.b64encode(open(ruta, "rb").read()).decode())
-        except Exception:
-            pass
-        out.append({"logo": logo, "name": nombre, "tag": tag, "cta": cta,
-                    "color": color, "url": _con_utm(url, slug)})
-    return json.dumps(out)
 
 ORB = (140, 76)      # cápsula: avatar + botón de privacidad
 PANEL = (380, 600)
@@ -218,37 +175,6 @@ body:not(.expanded) { background: #0b2134; }
 @keyframes errorg { 0%, 60% { filter: saturate(.6) brightness(.9); } }
 body.expanded.muted #mini-orb {
   filter: grayscale(1) brightness(.55); box-shadow: none; }
-#promo { --pa: #35d6ff; position: relative; display: flex;
-  align-items: center; gap: 9px; cursor: pointer; margin: 6px 12px 0;
-  padding: 7px 10px; border-radius: 11px; overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--pa) 35%, #143047);
-  background:
-    radial-gradient(130% 200% at 100% 50%,
-      color-mix(in srgb, var(--pa) 20%, transparent), transparent 55%),
-    radial-gradient(90% 160% at 0% 50%,
-      color-mix(in srgb, var(--pa) 10%, transparent), transparent 50%),
-    linear-gradient(90deg, #071320, #0a1d2e);
-  transition: box-shadow .3s ease, border-color .3s ease; }
-#promo::after { content: ''; position: absolute; inset: 0;
-  background: linear-gradient(115deg, transparent 30%,
-    rgba(255, 255, 255, .05) 45%, transparent 60%); pointer-events: none; }
-#promo:hover { border-color: color-mix(in srgb, var(--pa) 70%, #143047);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--pa) 30%, transparent); }
-#promo-logo { width: 27px; height: 27px; border-radius: 7px; flex: none;
-  box-shadow: 0 0 8px color-mix(in srgb, var(--pa) 40%, transparent); }
-#promo-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-#promo-name { font-size: 11px; color: #f2faff; letter-spacing: .3px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#promo-tag { font-size: 10px; color: #9db8ca; white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis; }
-#promo-cta { flex: none; font-size: 9px; font-weight: 700;
-  letter-spacing: 1.2px; color: var(--pa); padding: 4px 11px;
-  border: 1px solid color-mix(in srgb, var(--pa) 65%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--pa) 10%, transparent);
-  text-shadow: 0 0 8px color-mix(in srgb, var(--pa) 60%, transparent); }
-#promo:hover #promo-cta {
-  background: color-mix(in srgb, var(--pa) 22%, transparent); }
 #mic-btn, #new-btn, #stop-btn {
   background: linear-gradient(180deg, #0b2334, #081a29);
   border: 1px solid var(--line); border-radius: 10px; cursor: pointer;
@@ -291,13 +217,7 @@ body.expanded.thinking #mini-orb {
 body.expanded.chat #mini-orb {
   box-shadow: 0 0 10px rgba(61, 214, 140, .8); }
 h1 { font-size: 15px; letter-spacing: 4px; font-weight: 600;
-  color: var(--cyan); flex: 1; display: flex; flex-direction: column;
-  gap: 2px; min-width: 0; }
-h1 { cursor: pointer; }
-h1:hover #marca { text-decoration: underline; }
-#marca { font-size: 10px; letter-spacing: 1.2px; color: #7de4ff;
-  font-weight: 700; white-space: nowrap;
-  text-shadow: 0 0 8px rgba(53, 214, 255, .55); }
+  color: var(--cyan); flex: 1; min-width: 0; }
 /* Botones de ícono del header: PNG transparentes que flotan solos —
    sin caja, el glow lo trae el propio dibujo. */
 .icon-btn { width: 30px; height: 30px; flex: none; padding: 0;
@@ -485,7 +405,7 @@ body.error #estado-line::before { background: #ff5c5c; }
 <div id="panel">
   <header class="pywebview-drag-region">
     <div id="mini-orb" onclick="pywebview.api.toggle()" title="Achicar"></div>
-    <h1 onclick="pywebview.api.abrir_web()" title="KloomStudio.com.ar"><span id="app-name">HARVIS</span><span id="marca">by KloomStudio.com.ar</span></h1>
+    <h1><span id="app-name">HARVIS</span></h1>
     <button id="tienda-btn" class="icon-btn" onclick="toggleTienda()"
             title="Tienda de skills"><img src="__CART__" alt=""></button>
     <button id="skills-btn" class="icon-btn" onclick="toggleSkills()"
@@ -497,15 +417,6 @@ body.error #estado-line::before { background: #ff5c5c; }
   <div id="log"></div>
   <div id="timers"></div>
   <div id="brains"></div>
-  <div id="promo" title="Apps de KloomStudio"
-       onclick="pywebview.api.abrir_url(this.dataset.url)">
-    <img id="promo-logo" alt="">
-    <div id="promo-txt">
-      <b id="promo-name"></b>
-      <span id="promo-tag"></span>
-    </div>
-    <span id="promo-cta"></span>
-  </div>
   <div id="entrada">
     <button id="mic-btn" title="Micrófono on/off"
             onclick="pywebview.api.toggle_mic()"><svg class="ic"
@@ -774,22 +685,6 @@ function enviar() {
   if (!i.value.trim()) return;
   pywebview.api.send_text(i.value.trim()); i.value = '';
 }
-// Banner de apps de KloomStudio — rota cada 15 s.
-const PROMOS = __PROMOS__;
-let PROMO_I = Math.floor(Math.random() * PROMOS.length);
-function rotarPromo() {
-  const el = document.getElementById('promo');
-  if (!el || !PROMOS.length) return;
-  const p = PROMOS[PROMO_I++ % PROMOS.length];
-  document.getElementById('promo-logo').src = p.logo;
-  document.getElementById('promo-name').textContent = p.name;
-  document.getElementById('promo-tag').textContent = p.tag;
-  document.getElementById('promo-cta').textContent = p.cta;
-  el.style.setProperty('--pa', p.color || '#35d6ff');
-  el.dataset.url = p.url;
-}
-setInterval(rotarPromo, 15000);
-rotarPromo();
 aplicarIdioma();
 // Textos fijos de la UI según el idioma activo (los que no re-renderiza
 // nadie más). Se llama al cargar y al cambiar de idioma.
@@ -1076,18 +971,6 @@ class Hud:
     def abortar(self):
         self.loop.call_soon_threadsafe(self.abort_sink)
 
-    def abrir_web(self):
-        import webbrowser
-        webbrowser.open("https://kloomstudio.com.ar")
-        return "ok"
-
-    def abrir_url(self, url: str):
-        """Banner de apps: solo https, nada raro."""
-        import webbrowser
-        if isinstance(url, str) and url.startswith("https://"):
-            webbrowser.open(url)
-        return "ok"
-
     def get_skills_data(self):
         try:
             return self.skills_data()
@@ -1157,7 +1040,7 @@ class Hud:
             out.append(f"{p['kind']} {p['due'].strftime('%H:%M')}{et}")
         return out
 
-    # ---------- eventos desde kloom.py (thread asyncio) ----------
+    # ---------- eventos desde harvis.py (thread asyncio) ----------
     def _js(self, code: str):
         if not self._ready.is_set():
             self._pending.append(code)
@@ -1248,7 +1131,7 @@ class Hud:
         self._pending.clear()
 
 
-# pywebview solo corre en el thread principal: kloom.py invierte los roles
+# pywebview solo corre en el thread principal: harvis.py invierte los roles
 # (asyncio va a un thread worker y el main se queda sirviendo la UI).
 _INSTANCE: Hud | None = None
 _REGISTERED = threading.Event()
@@ -1275,7 +1158,6 @@ def serve_main_thread(timeout: float = 300):
     hud.window = webview.create_window(
         "HARVIS", html=HTML.replace("__AVATAR__", AVATAR_URI)
                           .replace("__FONT__", FONT_URI)
-                          .replace("__PROMOS__", _promos_json())
                           .replace("__LANG__", _hud_lang(hud.cfg))
                           .replace("__GEAR__", GEAR_URI)
                           .replace("__CART__", CART_URI),

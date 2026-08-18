@@ -8,7 +8,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 
 async def main():
-    from kloom import load_config
+    from harvis import load_config
     from cerebro import crear_cerebro
     import tools.media as media
     from registry import kloom_tool

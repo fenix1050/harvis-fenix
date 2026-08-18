@@ -117,7 +117,7 @@ def test_disabled_default_and_enabled_flag():
 
 
 def test_load_config_defaults_core_to_disabled():
-    from kloom import load_config
+    from harvis import load_config
 
     assert load_config()["jarvis_core"]["enabled"] is False
 
@@ -145,7 +145,7 @@ def test_core_has_no_harvis_runtime_imports():
             imported_roots.add(node.module.split(".", 1)[0])
 
     forbidden_roots = {
-        "kloom", "hud", "oido", "boca", "cerebro", "tools",
+        "harvis", "hud", "oido", "boca", "cerebro", "tools",
         "hermes", "claude", "claude_code", "claudecode",
     }
     assert not imported_roots & forbidden_roots

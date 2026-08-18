@@ -7,9 +7,9 @@ from registry import kloom_tool
 from teclado import paste
 from tools.windows import _find_window, focus_hwnd
 
-log = logging.getLogger("kloom.tools.claude_code")
+log = logging.getLogger("harvis.tools.claude_code")
 
-WINDOW_TITLE = "Claude"  # kloom.py lo pisa desde config.yaml
+WINDOW_TITLE = "Claude"  # harvis.py lo pisa desde config.yaml
 
 
 def paste_to_window(title: str, text: str, press_enter: bool = True) -> str:

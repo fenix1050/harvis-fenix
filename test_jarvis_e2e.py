@@ -25,7 +25,7 @@ def notepad_windows():
 
 
 async def main():
-    from kloom import load_config, parse_switch
+    from harvis import load_config, parse_switch
     from cerebro import crear_cerebro
     from cerebro_jarvis import CerebroJarvis
     from tools import browser, claude_code, media, windows

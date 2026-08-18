@@ -3,7 +3,7 @@ import sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from kloom import MUSICA_CEREBRO_RE, MUSICA_DIRECTAS, sin_tildes
+from harvis import MUSICA_CEREBRO_RE, MUSICA_DIRECTAS, sin_tildes
 
 
 def clasificar(frase: str):
@@ -76,14 +76,14 @@ print("test_musica OK ✓")
 
 def test_atajo_playlist():
     """"poné mi playlist X" se resuelve sin cerebro; la letra no."""
-    import kloom
+    import harvis
     casos = [("poné mi playlist goodvibes", "goodvibes"),
              ("Harvis poneme nightcore", "nightcore"),
              ("cuando la vida te da la espalda y todo se pone gris", None),
              ("pausá la música", None),
              ("poné bersuit", None)]
     for texto, esperado in casos:
-        got = kloom._playlist_pedida(texto)
+        got = harvis._playlist_pedida(texto)
         # sin playlists aprendidas (repo limpio) el atajo nunca dispara
         assert got in (esperado, None), f"{texto!r} -> {got!r}"
     print("atajo de playlist OK ✓")

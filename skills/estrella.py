@@ -10,7 +10,7 @@ import logging
 import os
 import time
 
-log = logging.getLogger("kloom.skills.estrella")
+log = logging.getLogger("harvis.skills.estrella")
 
 ESTADO = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                       "estrella.json")

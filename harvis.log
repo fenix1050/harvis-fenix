@@ -1,0 +1,28 @@
+16:55:45 INFO    kloom  skills: actualizador(1), briefing_matinal(0), coach(0), estrella(1), redactor(3), teams_asistente(3), vigia_homelab(0)
+16:55:51 INFO    kloom.oido  AEC activo (delay 120 ms)
+16:55:51 INFO    kloom.eco  AEC: loopback Altavoces (Realtek(R) Audio) [Loopback] @48000Hz x2
+16:55:51 INFO    kloom.oido  mic abierto, PTT=f8
+16:55:51 INFO    kloom  watchers: actualizador, briefing_matinal, estrella, vigia_homelab
+16:55:51 ERROR   kloom.eco  AEC: loopback murió — sigo SIN cancelación
+Traceback (most recent call last):
+  File "C:\Visual Studio\Harvis\eco.py", line 52, in _loopback
+    st = p.open(format=pa.paInt16, channels=ch, rate=sr_lb,
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Visual Studio\Harvis\.venv\Lib\site-packages\pyaudiowpatch\__init__.py", line 801, in open
+    stream = Stream(self, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Visual Studio\Harvis\.venv\Lib\site-packages\pyaudiowpatch\__init__.py", line 461, in __init__
+    self._stream = pa.open(**arguments)
+                   ^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno -9996] Invalid device
+16:55:51 DEBUG   kloom.oido  nivel mic: peak=0.0000 buf=0.2s muted=False
+16:55:51 INFO    kloom.skills.vigia  vigía: sin homelab configurado, no arranco
+16:55:52 INFO    kloom  cerebro groq conectado
+16:56:01 DEBUG   kloom.oido  nivel mic: peak=0.0000 buf=10.4s muted=False
+16:56:11 DEBUG   kloom.oido  nivel mic: peak=0.0000 buf=20.5s muted=False
+16:56:22 DEBUG   kloom.oido  nivel mic: peak=0.0000 buf=30.6s muted=False
+16:56:32 DEBUG   kloom.oido  nivel mic: peak=0.0000 buf=40.8s muted=False
+16:56:42 DEBUG   kloom.oido  nivel mic: peak=0.0000 buf=51.0s muted=False
+16:56:52 DEBUG   kloom.oido  nivel mic: peak=0.0000 buf=61.2s muted=False
+16:57:02 DEBUG   kloom.oido  nivel mic: peak=0.0000 buf=71.4s muted=False
+16:57:13 DEBUG   kloom.oido  nivel mic: peak=0.0000 buf=81.6s muted=False

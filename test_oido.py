@@ -4,7 +4,7 @@ import numpy as np
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 async def main():
-    from kloom import load_config, match_wake
+    from harvis import load_config, match_wake
     from oido import Oido, SAMPLE_RATE
     cfg = load_config()
     loop = asyncio.get_running_loop()

@@ -1,4 +1,4 @@
-"""Cerebros de KLOOM. Factory + driver Claude (Agent SDK, suscripción Max).
+"""Cerebros de HARVIS. Factory + driver Claude (Agent SDK, suscripción Max).
 La sesión es persistente: los comandos sucesivos comparten contexto
 ("abrí spotify" ... "ahora cerrala")."""
 import asyncio
@@ -17,7 +17,7 @@ from claude_agent_sdk import (
 
 from registry import Tool, to_sdk
 
-log = logging.getLogger("kloom.cerebro")
+log = logging.getLogger("harvis.cerebro")
 
 BRAINS = ("claude", "ollama", "groq", "kimi", "openai", "gemini")
 
@@ -36,7 +36,7 @@ def cuenta_activa() -> str:
 
 class SuscripcionBloqueada(Exception):
     """La cuenta de Claude activa no permite uso headless de la suscripción
-    (pasa al rotar cuentas). kloom.py la atrapa y cae al cerebro fallback."""
+    (pasa al rotar cuentas). harvis.py la atrapa y cae al cerebro fallback."""
 
 
 def _error_hablable(result) -> str:
@@ -90,9 +90,9 @@ class CerebroClaude:
             else:
                 os.environ.pop("CLAUDE_CONFIG_DIR", None)
         sdk_tools = [to_sdk(t) for t in tools]
-        server = create_sdk_mcp_server(name="kloom", version="1.0.0",
+        server = create_sdk_mcp_server(name="harvis", version="1.0.0",
                                        tools=sdk_tools)
-        allowed = [f"mcp__kloom__{t.name}" for t in tools]
+        allowed = [f"mcp__harvis__{t.name}" for t in tools]
         modelo = pcfg.get("model", "sonnet")
         # Un LLM no sabe qué modelo es: si no se le dice, inventa ("soy Opus
         # 4.5"). Va el valor real de config.yaml.
@@ -101,14 +101,14 @@ class CerebroClaude:
             model=modelo,
             system_prompt=lcfg.get("system_prompt", "")
                           + f"\nCorrés sobre Claude '{modelo}' (lo dice la "
-                            "config de KLOOM). Si te preguntan qué modelo "
+                            "config de HARVIS). Si te preguntan qué modelo "
                             "sos, decí exactamente eso y aclará que se "
                             "cambia en config.yaml; nunca inventes otro."
                           + contexto_sistema()
                           + sufijo_idioma(cfg),
             # CodeGraph entra como tools comunes (tools/codigo.py, vía CLI):
             # así lo tienen TODOS los cerebros, no solo Claude.
-            mcp_servers={"kloom": server},
+            mcp_servers={"harvis": server},
             # Read/Glob/Grep nativas: HARVIS puede LEER los proyectos de la
             # PC. Bash/Write/Edit siguen afuera — nada destructivo por voz.
             allowed_tools=allowed + ["Read", "Glob", "Grep"],
@@ -127,7 +127,7 @@ class CerebroClaude:
             max_buffer_size=10 * 1024 * 1024,
         )
         # Con qué login se creó este cliente: si al fallar por suscripción
-        # la cuenta activa ya es otra, kloom reintenta Claude antes de caer
+        # la cuenta activa ya es otra, harvis reintenta Claude antes de caer
         # a un fallback.
         self.cuenta = cuenta_activa()
         self.client: ClaudeSDKClient | None = None

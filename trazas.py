@@ -10,7 +10,7 @@ import os
 import time
 import uuid
 
-log = logging.getLogger("kloom.trazas")
+log = logging.getLogger("harvis.trazas")
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 TRACE_FILE = os.path.join(_DIR, "turnos.jsonl")

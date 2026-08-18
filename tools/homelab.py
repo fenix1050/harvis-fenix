@@ -8,9 +8,9 @@ import re
 
 from registry import kloom_tool
 
-log = logging.getLogger("kloom.tools.homelab")
+log = logging.getLogger("harvis.tools.homelab")
 
-HOST = ""            # kloom.py lo setea desde config tools.homelab.host
+HOST = ""            # harvis.py lo setea desde config tools.homelab.host
 TIMEOUT = 30
 MAX_OUT = 2500
 
@@ -52,7 +52,7 @@ async def homelab_run(args):
 
 # Rutas ABSOLUTAS: '~' entre comillas simples no expande y termina creando
 # un directorio literal "~" (pasó en el primer test).
-VAULT = ""           # kloom.py lo setea desde config tools.homelab.vault
+VAULT = ""           # harvis.py lo setea desde config tools.homelab.vault
 VAULTS = []          # tools.homelab.vault acepta una ruta o una lista
 HARVIS_DIR = ""      # <vault>/HARVIS — la única carpeta donde puede escribir
 _NOTA_OK = re.compile(r"^[\w\-. áéíóúñÁÉÍÓÚÑ]{1,60}\.md$")

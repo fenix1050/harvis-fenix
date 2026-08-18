@@ -1,4 +1,4 @@
-"""KLOOM OS — JARVIS del usuario.
+"""HARVIS — Asistente de voz por IA para Windows.
 
 - "Jarvis, <comando>" → agente Claude con tools de la PC, responde hablando.
 - F8 mantenido → dictado: lo dicho se pega en la ventana activa.
@@ -11,7 +11,7 @@ import sys
 import time
 
 # Bajo pythonw (sin consola) stdout/stderr son None y cualquier print
-# revienta; van a /dev/null. El log de verdad vive en kloom.log.
+# revienta; van a /dev/null. El log de verdad vive en harvis.log.
 if sys.stdout is None:
     sys.stdout = open(os.devnull, "w", encoding="utf-8")
 if sys.stderr is None:
@@ -28,7 +28,7 @@ from cerebro import (BRAINS, SuscripcionBloqueada, crear_cerebro,
                      cuenta_activa)
 from oido import Oido
 
-log = logging.getLogger("kloom")
+log = logging.getLogger("harvis")
 
 import difflib
 import re
@@ -441,7 +441,7 @@ async def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     logging.basicConfig(
-        filename="kloom.log", filemode="w", level=logging.DEBUG,
+        filename="harvis.log", filemode="w", level=logging.DEBUG,
         format="%(asctime)s %(levelname)-7s %(name)s  %(message)s",
         datefmt="%H:%M:%S",
     )
@@ -827,7 +827,7 @@ async def main():
 
     wake_word = (cfg.get("wake") or {}).get("word", "jarvis")
     ptt_key = (cfg.get("ptt") or {}).get("key", "f8").upper()
-    print(f"\n🎤 KLOOM OS listo. Decí «{wake_word}, ...» para comandos, "
+    print(f"\n🎤 HARVIS listo. Decí «{wake_word}, ...» para comandos, "
           f"mantené {ptt_key} para dictar. Ctrl+C para salir.\n", flush=True)
     hud.set_state("idle")
     hud.actividad("Listo para escuchar")
@@ -1623,7 +1623,7 @@ def _run():
         print("\nKLOOM OS apagado.", file=sys.stderr)
     except Exception:
         # la consola está oculta: un crash sin log = HARVIS "muerto sin causa"
-        logging.getLogger("kloom").exception("worker MURIÓ en el arranque")
+        logging.getLogger("harvis").exception("worker MURIÓ en el arranque")
         raise
 
 
@@ -1639,7 +1639,7 @@ if __name__ == "__main__":
         # Identidad propia en la barra de tareas (si no, agrupa como Python
         # y hereda su ícono).
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-            "Kloom.HARVIS")
+            "Harvis.HARVIS")
 
         # pywebview exige el thread principal → asyncio va a un worker y
         # el main sirve la ventana. Si el worker muere, se baja la UI.
@@ -1653,7 +1653,7 @@ if __name__ == "__main__":
             finally:
                 hud_mod.shutdown()
 
-        threading.Thread(target=worker, daemon=True, name="kloom").start()
+        threading.Thread(target=worker, daemon=True, name="harvis").start()
         hud_mod.serve_main_thread()
     else:
         _run()

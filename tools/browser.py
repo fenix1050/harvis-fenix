@@ -7,10 +7,10 @@ import webbrowser
 
 from registry import kloom_tool
 
-log = logging.getLogger("kloom.tools.browser")
+log = logging.getLogger("harvis.tools.browser")
 
-CDP_PORT = 9222  # kloom.py lo pisa desde config.yaml
-ON_MUSICA = None  # lo setea kloom: al arrancar música → privacidad AUTO
+CDP_PORT = 9222  # harvis.py lo pisa desde config.yaml
+ON_MUSICA = None  # lo setea harvis: al arrancar música → privacidad AUTO
                   # (si no, el mic confunde la música con habla del usuario)
 
 

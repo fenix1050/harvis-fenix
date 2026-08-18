@@ -1,5 +1,5 @@
 """Timers y alarmas con aviso por voz. Viven en memoria del proceso;
-kloom.py setea ANNOUNCE (async) para hablar cuando vencen."""
+harvis.py setea ANNOUNCE (async) para hablar cuando vencen."""
 import asyncio
 import datetime
 import itertools
@@ -7,9 +7,9 @@ import logging
 
 from registry import kloom_tool
 
-log = logging.getLogger("kloom.tools.timers")
+log = logging.getLogger("harvis.tools.timers")
 
-ANNOUNCE = None  # async (text) -> None; kloom.py lo setea al arrancar
+ANNOUNCE = None  # async (text) -> None; harvis.py lo setea al arrancar
 _seq = itertools.count(1)
 PENDIENTES: dict[int, dict] = {}
 

@@ -11,7 +11,7 @@ import threading
 
 import numpy as np
 
-log = logging.getLogger("kloom.eco")
+log = logging.getLogger("harvis.eco")
 
 SR = 16000
 FRAME = 160          # 10 ms — el APM procesa de a este tamaño

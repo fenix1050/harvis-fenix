@@ -1,10 +1,10 @@
 """Modo charla: entrada, salidas y que no se dispare con la charla real
-del corpus (kloom.log de la llamada telefónica)."""
+del corpus (harvis.log de la llamada telefónica)."""
 import sys
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from kloom import ENTER_CHAT_RE, EXIT_CHAT_RE, sin_tildes
+from harvis import ENTER_CHAT_RE, EXIT_CHAT_RE, sin_tildes
 
 ENTRAR = ["modo charla", "modo conversación", "entrá en modo charla",
           "modo chat", "hablemos", "charlemos un rato", "conversemos"]
@@ -15,7 +15,7 @@ SALIR = ["listo", "basta", "chau", "cortala", "terminamos", "gracias jarvis",
          "cortá la charla", "bueno listo, gracias"]
 # "dejá de escuchar" ya NO corta la charla: activa modo privacidad (más
 # fuerte — apaga el mic del todo). Lo verifica el PRIVACY_RE:
-from kloom import PRIVACY_RE
+from harvis import PRIVACY_RE
 assert PRIVACY_RE.search(sin_tildes("dejá de escuchar"))
 NO_SALIR = ["contame un chiste", "qué hora es", "cómo viene tucora",
             "poneme un timer de diez minutos", "abrí el bloc de notas"]

@@ -7,9 +7,9 @@ import os
 
 from registry import kloom_tool
 
-log = logging.getLogger("kloom.tools.proyectos")
+log = logging.getLogger("harvis.tools.proyectos")
 
-MEMORY_DIR = ""   # kloom.py lo setea desde config tools.proyectos.memory_dir
+MEMORY_DIR = ""   # harvis.py lo setea desde config tools.proyectos.memory_dir
 MAX_CHARS = 2500  # el LLM resume para voz; no hace falta el archivo entero
 
 

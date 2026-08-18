@@ -227,7 +227,7 @@ def main() -> int:
     if _fallas:
         print(f"{len(_fallas)} problem(s) to fix before HARVIS runs.")
         return 1
-    print("All good. Run kloom.cmd and say the wake word.")
+    print("All good. Run harvis.cmd and say the wake word.")
     return 0
 
 

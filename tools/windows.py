@@ -8,7 +8,7 @@ import win32gui
 
 from registry import kloom_tool
 
-log = logging.getLogger("kloom.tools.windows")
+log = logging.getLogger("harvis.tools.windows")
 
 _START_DIRS = [
     os.path.expandvars(r"%ProgramData%\Microsoft\Windows\Start Menu\Programs"),

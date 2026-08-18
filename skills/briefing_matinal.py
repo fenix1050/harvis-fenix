@@ -7,7 +7,7 @@ import asyncio
 import datetime
 import logging
 
-log = logging.getLogger("kloom.skills.briefing")
+log = logging.getLogger("harvis.skills.briefing")
 
 CHEQUEO = 20          # cada cuánto mira el reloj (y relee la config del HUD)
 VENTANA = 60 * 60     # si arranca más tarde que esto, el briefing ya venció

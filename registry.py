@@ -1,4 +1,4 @@
-"""Formato canónico de tools de KLOOM. La dependencia apunta hacia acá:
+"""Formato canónico de tools de HARVIS. La dependencia apunta hacia acá:
 los drivers (Claude SDK, OpenAI-compat) consumen Tool vía sus adaptadores,
 las tools nunca importan un SDK de vendor.
 
@@ -11,7 +11,7 @@ from typing import Any, Callable
 
 _JSON_TYPES = {str: "string", int: "integer", float: "number", bool: "boolean"}
 
-# Callback opcional (lo setea kloom): se llama con el NOMBRE de la tool al
+# Callback opcional (lo setea harvis): se llama con el NOMBRE de la tool al
 # arrancar su ejecución — el HUD muestra "Leyendo Teams…" en vivo.
 ON_TOOL = None
 
@@ -32,7 +32,7 @@ class Tool:
     handler: Callable
 
 
-def kloom_tool(name: str, description: str, params: dict, meta: dict | None = None):
+def harvis_tool(name: str, description: str, params: dict, meta: dict | None = None):
     """meta (opcional, para skills de la comunidad): category, tags,
     destructive, requires_confirmation... Hoy solo se almacena; la API
     queda estable para cuando el ecosistema la explote."""
@@ -41,6 +41,10 @@ def kloom_tool(name: str, description: str, params: dict, meta: dict | None = No
         t.meta = meta or {}
         return t
     return deco
+
+
+# Alias para compatibilidad con código existente
+kloom_tool = harvis_tool
 
 
 def _json_schema(params: dict) -> dict:

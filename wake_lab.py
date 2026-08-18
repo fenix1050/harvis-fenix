@@ -1,5 +1,5 @@
 """Laboratorio del wake word: mide recall/falsos+ de cada candidato contra el
-corpus REAL de kloom.log (charla telefónica ajena + música = negativos; los
+corpus REAL de harvis.log (charla telefónica ajena + música = negativos; los
 intentos del usuario = positivos). Correr tras cada sesión fallida:
 
   python wake_lab.py          # compara candidatos
@@ -37,7 +37,7 @@ POSITIVOS = [
 _PALABRAS_POS = {"javi", "harvey", "jarvis", "harris", "harvis", "jervis",
                  "hergis", "carguis", "charbis", "sharvis", "chervis"}
 
-# corpus_oido.txt = frases reales oídas por TU mic (se extrae de kloom.log,
+# corpus_oido.txt = frases reales oídas por TU mic (se extrae de harvis.log,
 # líneas "oído:"); es personal y no viene en el repo — sin él, el lab corre
 # solo con los negativos de ejemplo.
 NEGATIVOS = []

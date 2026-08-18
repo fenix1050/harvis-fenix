@@ -10,7 +10,7 @@ import datetime
 import logging
 import re
 
-log = logging.getLogger("kloom.skills.vigia")
+log = logging.getLogger("harvis.skills.vigia")
 
 INTERVALO = 15 * 60
 DISCO_UMBRAL = 90            # % del disco vigilado (tools.homelab.disk_path)

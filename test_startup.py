@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from kloom import startup_failure_message
+from harvis import startup_failure_message
 from stt import Stt, configured_status
 
 

@@ -8,7 +8,7 @@ import time
 
 from registry import kloom_tool
 
-log = logging.getLogger("kloom.tools.teams")
+log = logging.getLogger("harvis.tools.teams")
 
 MAX_ITEMS = 25
 

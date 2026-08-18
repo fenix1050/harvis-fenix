@@ -5,7 +5,7 @@
 <p align="center">
   <b>Your Windows PC. Controlled by voice. Powered by the AI you choose.</b><br>
   A hackable <b>voice AI assistant</b> for Windows — full source, free for
-  personal use — by <a href="https://kloomstudio.com.ar">KloomStudio.com.ar</a>
+  personal use
 </p>
 
 <p align="center">
@@ -115,7 +115,7 @@ cd harvis
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
 .venv\Scripts\python.exe doctor.py
-kloom.cmd
+harvis.cmd
 ```
 
 Say **"Harvis"** — it answers, then you talk. Or click the capsule and type.
@@ -169,21 +169,17 @@ speech recognizer writes "harley", "harvest" or "javier".
 - **Rename it** — HARVIS is just the default. From the HUD you can change the
   wake word to anything, in any language, and the whole app renames itself.
 
-> The HUD shows a small rotating banner with other
-> [KloomStudio](https://kloomstudio.com.ar) apps — that's how the free version
-> pays for itself. Leaving it on is how you say thanks 😉
-
 ## Write a skill
 
 One Python file in `skills/`. Full guide: **[SKILLS.md](SKILLS.md)**.
 
 ```python
 """My skill: what it does (this first line shows in the HUD)."""
-from registry import kloom_tool
+from registry import harvis_tool
 
 PROMPT = "Context the LLM gets about this skill."
 
-@kloom_tool("my_tool", "What the LLM reads to decide when to call it.",
+@harvis_tool("my_tool", "What the LLM reads to decide when to call it.",
             {"param": str, "optional": (str, "default")})
 async def my_tool(args):
     return "result the assistant speaks"
@@ -205,7 +201,7 @@ Questions, a skill you built, a bug you can't pin down, or just showing what you
 made it do — there's a Telegram group:
 
 <p align="center">
-  <a href="https://t.me/+0tInup5bmYBiZjNh"><b>📣 Join KloomCommunity on Telegram</b></a>
+  <a href="https://t.me/+0tInup5bmYBiZjNh"><b>📣 Join the community on Telegram</b></a>
 </p>
 
 Bugs and feature requests are better as
@@ -219,7 +215,7 @@ oido.py      mic, VAD, push-to-talk, self-healing audio stream
 eco.py       WebRTC echo cancellation (WASAPI loopback reference)
 stt.py       faster-whisper + anti-hallucination filters + wake protections
 huella.py    acoustic wake-word fingerprint (MFCC + DTW, zero deps)
-kloom.py     orchestrator: wake → modes → brain → voice
+harvis.py     orchestrator: wake → modes → brain → voice
 cerebro.py   brain factory + Claude Agent SDK driver
 cerebro_jarvis.py  OpenAI-compatible driver (Groq/Ollama/OpenAI/Gemini/Kimi)
 registry.py  canonical Tool format — tools never import a vendor SDK
@@ -257,22 +253,16 @@ PRs welcome.
 
 ## Sponsors
 
-HARVIS is free and stays free. Sponsoring is what buys the hours that go into
-it: new skills, fewer rough edges, and answering the people who show up with
-issues.
+HARVIS is free and stays free. Sponsoring helps support ongoing development:
+new skills, improvements, and support for the community.
 
 <p align="center">
   <a href="https://github.com/sponsors/Kloom89"><img alt="Sponsor HARVIS" src="https://img.shields.io/badge/sponsor-HARVIS-ff5f8f?style=for-the-badge&logo=githubsponsors&logoColor=white"></a>
 </p>
 
-There's also a **[skill store](https://kloom89.github.io/harvis/)** — paid
-skills that don't ship with HARVIS, installable in one click from the HUD.
-
 Sponsors get their name in this section and their issues looked at first.
 
-**Using HARVIS for work?** The standard license doesn't cover that. The
-$50/month tier licenses commercial use on your own machine; $250 and $1,000
-cover a team (see [License](#license--personal-use-not-for-sale)).
+**Using HARVIS for work?** The standard license doesn't cover that. Contact for commercial licensing options.
 
 *No sponsors yet. Yours would be the first one here.*
 
@@ -287,10 +277,7 @@ you can do almost anything with it — but to be precise, that's a
 whoever you want, for personal projects.
 
 **You cannot** sell HARVIS, or sell a product or service built on it, without
-permission. Want a commercial license?
-Write to [KloomStudio](https://kloomstudio.com.ar).
-
-© 2026 KloomStudio · [kloomstudio.com.ar](https://kloomstudio.com.ar)
+permission. Want a commercial license? Open an issue to discuss.
 
 If HARVIS saved you time, give the repo a ⭐. If you built something
 interesting with it, open an issue and show us.

@@ -1,6 +1,6 @@
 """Skill Redactor: "harvis, modo redactor" → HARVIS anota TODO lo que digas
 (sin mandarlo al cerebro, sin gastar tokens); "listo" cierra, y después
-"pegalo" lo escribe donde quieras. El modo vive en kloom.py (toca el loop
+"pegalo" lo escribe donde quieras. El modo vive en harvis.py (toca el loop
 de audio); estas tools operan sobre el texto juntado."""
 import asyncio
 

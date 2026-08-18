@@ -9,7 +9,7 @@ import os
 
 from registry import kloom_tool
 
-log = logging.getLogger("kloom.tools.vision")
+log = logging.getLogger("harvis.tools.vision")
 
 _DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                     "screenshots")

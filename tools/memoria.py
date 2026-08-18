@@ -14,7 +14,7 @@ import re
 
 from registry import kloom_tool
 
-log = logging.getLogger("kloom.tools.memoria")
+log = logging.getLogger("harvis.tools.memoria")
 
 _DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MEMFILE = os.path.join(_DIR, "memoria.md")

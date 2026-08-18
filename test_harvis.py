@@ -4,7 +4,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 import numpy as np
 
 def test_match_wake():
-    from kloom import load_config, match_wake
+    from harvis import load_config, match_wake
     cfg = load_config()
     cases = [
         ("Jarvis, abrí el navegador.", "abrí el navegador."),
@@ -24,7 +24,7 @@ def test_match_wake():
 
 def test_stt():
     import edge_tts
-    from kloom import load_config
+    from harvis import load_config
     from stt import Stt
     async def synth(t, p):
         await edge_tts.Communicate(t, "es-AR-TomasNeural").save(p)
@@ -40,7 +40,7 @@ def test_stt():
     dt = time.time()-t0
     print(f"STT ({dt:.2f}s): {text!r}")
     assert dt < 2.0, "muy lento, no está en GPU?"
-    from kloom import match_wake, load_config as lc
+    from harvis import match_wake, load_config as lc
     cmd = match_wake(text, lc())
     assert cmd and "calculadora" in cmd.lower(), f"wake no matcheó: {text!r}"
     print("STT + wake OK")

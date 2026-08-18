@@ -5,8 +5,7 @@
 <p align="center">
   <b>Tu PC con Windows. Manejada por voz. Con la IA que vos elijas.</b><br>
   Un <b>asistente de IA por voz</b> hackeable para Windows — todo el código a la
-  vista, gratis para uso personal — por
-  <a href="https://kloomstudio.com.ar">KloomStudio.com.ar</a>
+  vista, gratis para uso personal
 </p>
 
 <p align="center">
@@ -120,7 +119,7 @@ cd harvis
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
 .venv\Scripts\python.exe doctor.py
-kloom.cmd
+harvis.cmd
 ```
 
 Decí **"Harvis"** — te contesta y ahí hablás. O le hacés clic a la cápsula y
@@ -177,21 +176,17 @@ reconocedor escriba cualquier cosa.
 - **Cambiale el nombre** — HARVIS es solo el default. Desde el HUD ponés el
   wake word que quieras, en cualquier idioma, y la app entera se renombra.
 
-> El HUD muestra un banner chiquito que rota con otras apps de
-> [KloomStudio](https://kloomstudio.com.ar) — así se paga la versión gratis.
-> Dejarlo prendido es tu forma de decir gracias 😉
-
 ## Escribir una skill
 
 Un archivo Python en `skills/`. Guía completa: **[SKILLS.md](SKILLS.md)**.
 
 ```python
 """Mi skill: qué hace (esta primera línea se muestra en el HUD)."""
-from registry import kloom_tool
+from registry import harvis_tool
 
 PROMPT = "Contexto que recibe el modelo sobre esta skill."
 
-@kloom_tool("mi_tool", "Lo que lee el modelo para decidir cuándo llamarla.",
+@harvis_tool("mi_tool", "Lo que lee el modelo para decidir cuándo llamarla.",
             {"param": str, "opcional": (str, "default")})
 async def mi_tool(args):
     return "el resultado que el asistente dice en voz alta"
@@ -213,7 +208,7 @@ Dudas, una skill que armaste, un bug que no podés agarrar, o simplemente
 mostrar para qué lo usás: hay un grupo de Telegram.
 
 <p align="center">
-  <a href="https://t.me/+0tInup5bmYBiZjNh"><b>📣 Sumate a KloomCommunity en Telegram</b></a>
+  <a href="https://t.me/+0tInup5bmYBiZjNh"><b>📣 Sumate a la comunidad en Telegram</b></a>
 </p>
 
 Los bugs y los pedidos de features conviene dejarlos como
@@ -227,7 +222,7 @@ oido.py      micrófono, VAD, push-to-talk, stream de audio que se recupera solo
 eco.py       cancelación de eco WebRTC (referencia por loopback WASAPI)
 stt.py       faster-whisper + filtros anti-alucinación + protecciones del wake word
 huella.py    huella acústica del wake word (MFCC + DTW, sin dependencias)
-kloom.py     orquestador: wake → modos → cerebro → voz
+harvis.py     orquestador: wake → modos → cerebro → voz
 cerebro.py   fábrica de cerebros + driver del Claude Agent SDK
 cerebro_jarvis.py  driver compatible OpenAI (Groq/Ollama/OpenAI/Gemini/Kimi)
 registry.py  formato canónico de Tool — las tools nunca importan un SDK
@@ -265,22 +260,17 @@ los PRs son bienvenidos.
 
 ## Sponsors
 
-HARVIS es gratis y va a seguir siéndolo. Lo que compra un sponsor son las horas
-que le entran: skills nuevas, menos asperezas, y responderle a la gente que
-aparece con un problema.
+HARVIS es gratis y va a seguir siéndolo. Los sponsors ayudan a mantener el
+desarrollo: skills nuevas, mejoras y soporte para la comunidad.
 
 <p align="center">
   <a href="https://github.com/sponsors/Kloom89"><img alt="Sponsor HARVIS" src="https://img.shields.io/badge/sponsor-HARVIS-ff5f8f?style=for-the-badge&logo=githubsponsors&logoColor=white"></a>
 </p>
 
-También hay una **[tienda de skills](https://kloom89.github.io/harvis/)** —
-skills pagas que no vienen incluidas, instalables en un click desde el HUD.
-
 Los sponsors van con su nombre en esta sección y sus issues se miran primero.
 
-**¿Lo usás para trabajar?** La licencia estándar no cubre eso. El tier de 50 USD
-por mes licencia el uso comercial en tu propia máquina; los de 250 y 1.000
-cubren un equipo (mirá la [licencia](#licencia--uso-personal-no-se-vende)).
+**¿Lo usás para trabajar?** La licencia estándar no cubre eso. Contactá para
+opciones de licencia comercial.
 
 *Todavía no hay ninguno. El tuyo sería el primero acá.*
 
@@ -295,10 +285,7 @@ hacer casi cualquier cosa con él — pero para ser precisos es una licencia
 quien quieras, para proyectos personales.
 
 **No podés** vender HARVIS, ni vender un producto o servicio construido sobre
-él, sin permiso. ¿Querés una licencia comercial? Escribinos a
-[KloomStudio](https://kloomstudio.com.ar).
-
-© 2026 KloomStudio · [kloomstudio.com.ar](https://kloomstudio.com.ar)
+él, sin permiso. ¿Querés una licencia comercial? Abrí un issue para discutirlo.
 
 Si HARVIS te ahorró tiempo, dejale una ⭐ al repo. Si armaste algo interesante
 con él, abrí un issue y mostralo.

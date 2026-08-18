@@ -4,7 +4,7 @@
 - PTT: tecla mantenida → evento ("ptt", audio) al soltar, sin VAD.
 
 Corre en threads (callback de sounddevice + poller); empuja eventos a una
-asyncio.Queue del loop principal. `mute()` descarta el mic mientras KLOOM
+asyncio.Queue del loop principal. `mute()` descarta el mic mientras HARVIS
 piensa o habla, para no escucharse a sí mismo."""
 import asyncio
 import logging
@@ -16,7 +16,7 @@ import sounddevice as sd
 from pynput import keyboard as pk
 from faster_whisper.vad import VadOptions, get_speech_timestamps
 
-log = logging.getLogger("kloom.oido")
+log = logging.getLogger("harvis.oido")
 
 SAMPLE_RATE = 16000
 _BLOCK = int(SAMPLE_RATE * 0.05)          # 50 ms
@@ -50,7 +50,7 @@ class Oido:
                 log.exception("AEC no disponible — sigo sin cancelación")
         self.ptt_key = (cfg.get("ptt") or {}).get("key", "f8")
         self.abort_key = (cfg.get("ptt") or {}).get("abort_key", "f9")
-        self.on_abort = lambda: None   # lo setea kloom: corta el turno
+        self.on_abort = lambda: None   # lo setea harvis: corta el turno
         self.loop = loop
         self.queue: asyncio.Queue = asyncio.Queue()
         self._buf = np.zeros(0, dtype=np.float32)

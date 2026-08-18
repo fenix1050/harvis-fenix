@@ -18,7 +18,7 @@ import time
 import numpy as np
 from faster_whisper import WhisperModel
 
-log = logging.getLogger("kloom.stt")
+log = logging.getLogger("harvis.stt")
 
 SAMPLE_RATE = 16000
 

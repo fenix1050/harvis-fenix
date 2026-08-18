@@ -11,9 +11,9 @@ from registry import kloom_tool
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
-log = logging.getLogger("kloom.tools.codigo")
+log = logging.getLogger("harvis.tools.codigo")
 
-PROYECTOS = ""   # kloom.py lo setea desde config tools.codigo.projects_dir
+PROYECTOS = ""   # harvis.py lo setea desde config tools.codigo.projects_dir
 MAX_OUT = 2500
 
 

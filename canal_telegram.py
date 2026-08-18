@@ -13,7 +13,7 @@ import os
 import urllib.parse
 import urllib.request
 
-log = logging.getLogger("kloom.telegram")
+log = logging.getLogger("harvis.telegram")
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 OWNER_FILE = os.path.join(_DIR, "telegram_owner.json")

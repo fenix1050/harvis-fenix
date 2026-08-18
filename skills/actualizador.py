@@ -10,7 +10,7 @@ import sys
 
 from registry import kloom_tool
 
-log = logging.getLogger("kloom.skills.actualizador")
+log = logging.getLogger("harvis.skills.actualizador")
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -50,7 +50,7 @@ async def harvis_update(args):
     # hablada). Los hijos de cmd sobreviven a la muerte del padre.
     subprocess.Popen(
         ["cmd", "/c",
-         f'timeout /t 15 /nobreak >nul & start "" /min "{os.path.join(BASE, "kloom.cmd")}"'],
+         f'timeout /t 15 /nobreak >nul & start "" /min "{os.path.join(BASE, "harvis.cmd")}"'],
         creationflags=subprocess.DETACHED_PROCESS
         | subprocess.CREATE_NEW_PROCESS_GROUP)
     asyncio.get_running_loop().call_later(12, os._exit, 0)
